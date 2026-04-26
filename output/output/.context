@@ -28,7 +28,7 @@ confirmed_decisions:
   presentation_scope:
     - classifier_presentation_only_in_markdown_docs
 
-proposed_output_subfolder: output/output_gpt-5.3-codex
+proposed_output_subfolder: output/output
 
 required_files:
   - architecture.md
