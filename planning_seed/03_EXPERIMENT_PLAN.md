@@ -21,6 +21,39 @@ The project compares **one simple and one complex base learner** head-to-head wi
 
 See [05_CLASSIFIER_CATALOG.md](05_CLASSIFIER_CATALOG.md) for the full candidate pool considered and selection rationale.
 
+**Paper reference**: The Decision Tree is the base learner used in the original Learn++ paper (Polikar et al., 2001), which validates our choice as a direct replication baseline. Gradient Boosting serves as the modern high-capacity counterpart.
+
+---
+
+## State of the Art and Reference Baselines
+
+### Learn++ Published Results
+
+| Source | Dataset | Base Learner | Reported Accuracy | Notes |
+|--------|---------|-------------|-------------------|-------|
+| Polikar et al., 2001 (original Learn++) | Optical character recognition | Decision Tree (CART) | ~85–92% | Incremental, multiple batches |
+| Polikar et al., 2001 | VOC dataset | Decision Tree | ~80–88% | Demonstrates batch stability |
+| Learn++.NSE (Elwell & Polikar, 2011) | Various | Decision Tree | 75–95% range | Non-stationary variant, concept drift |
+
+### State of the Art for Incremental/Continual Learning (2023–2026)
+
+| Method | Approach | Typical Accuracy (MNIST-class tasks) | Key Advantage |
+|--------|----------|---------------------------------------|---------------|
+| Learn++ (ensemble) | Weighted voting of base learners | 85–95% | No old data replay needed |
+| EWC (Kirkpatrick et al.) | Regularize important weights | 90–97% | Neural-only, principled |
+| PackNet | Prune & freeze subnetworks | 92–97% | Zero forgetting |
+| DER++ (Dark Experience Replay) | Replay + knowledge distillation | 93–98% | Strong on class-incremental |
+| Gradient Boosting (static, non-incremental) | Full retrain | 95–99% | Upper bound reference |
+
+### How to Use These Baselines
+
+1. **Our Decision Tree in Learn++** should aim to match or approach the original paper's results (~85–92% on similar complexity tasks).
+2. **Our Gradient Boosting in Learn++** should test whether added capacity pushes beyond what the original paper achieved.
+3. **Static Gradient Boosting** (trained on all data at once) serves as an upper bound — incremental methods will typically be slightly below this.
+4. **Report our results relative to these baselines** in the final presentation/report.
+
+> These numbers are indicative ranges. Exact comparison requires matching dataset complexity. Our experiments will produce our own baselines on Fashion-MNIST and OASIS-3.
+
 ---
 
 ## Experiment Matrix

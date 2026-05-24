@@ -14,11 +14,11 @@ Phase 1 (active): algorithm design and base learner selection — documentation 
 
 ### Objectives
 1. Evaluate Learn++ as the primary incremental learning framework (alternatives acknowledged).
-2. Select base learners ranging from simple (Decision Tree, Naive Bayes, Linear SVM) to complex (Gradient Boosting, Random Forest, RBF SVM).
-3. Design experiment protocol with paired simple-complex comparisons.
-4. Define data strategy: Fashion-MNIST (public benchmark) + OASIS-3 MRI (medical track).
+2. Compare 1 simple base learner (Decision Tree, depth 2) vs 1 complex base learner (Gradient Boosting) — as required by assignment.
+3. Decision Tree chosen as the base learner from the original Learn++ paper (Polikar et al., 2001).
+4. Define data strategy: Fashion-MNIST (public benchmark) + medical MRI (OASIS-3/BraTS/OpenNeuro).
 5. Document Learn++ equations, flow, and decision logic.
-6. Produce a complete planning package for implementation handoff.
+6. Produce planning package for implementation handoff.
 
 ### Out of Scope in Phase 1
 1. No model implementation code.
@@ -42,26 +42,42 @@ Phase 1 (active): algorithm design and base learner selection — documentation 
 ```
 ML_project/
 ├── README.md
-├── comments_from_M.txt          # Reviewer feedback on earlier versions
-├── output_improved/              # v1 planning documentation (21 files)
-└── output_improved_v2/           # v2 planning documentation (12 files, current)
-    ├── 01_ROADMAP.md
-    ├── 02_ARCHITECTURE.md
-    ├── 03_EXPERIMENT_PLAN.md
-    ├── 04_DATA_STRATEGY.md
-    ├── 05_CLASSIFIER_CATALOG.md
-    ├── 06_LEARNPP_ALGORITHM.md
-    ├── 07_REFINEMENT_PROCESS.md
-    ├── 08_RISKS_AND_ASSUMPTIONS.md
-    ├── 09_DECISION_LOG.md
-    ├── 10_TODO.md
-    ├── 11_GLOSSARY.md
-    ├── 12_HANDOFF_TEMPLATE.md
-    └── CHANGES_FROM_V1.md
+├── comments_from_M.txt          # Reviewer feedback (v1, addressed)
+├── M_notes_v2.txt               # Meeting notes and scope decisions
+├── planning_seed/               # Planning documentation (13 files)
+│   ├── 01_ROADMAP.md
+│   ├── 02_ARCHITECTURE.md
+│   ├── 03_EXPERIMENT_PLAN.md
+│   ├── 04_DATA_STRATEGY.md
+│   ├── 05_CLASSIFIER_CATALOG.md
+│   ├── 06_LEARNPP_ALGORITHM.md
+│   ├── 07_REFINEMENT_PROCESS.md
+│   ├── 08_RISKS_AND_ASSUMPTIONS.md
+│   ├── 09_DECISION_LOG.md
+│   ├── 10_TODO.md
+│   ├── 11_GLOSSARY.md
+│   ├── 12_HANDOFF_TEMPLATE.md
+│   ├── 13_PRESENTATION_PLAN.md
+│   └── CHANGES_FROM_V1.md
+├── src/                         # Implementation code
+│   ├── learnpp/                 # Learn++ from-scratch implementation
+│   ├── features/                # ROI feature extraction pipeline
+│   └── experiments/             # Experiment runners
+├── notebooks/                   # Step-by-step walkthroughs
+│   └── 01_learnpp_walkthrough.ipynb
+├── data/                        # Datasets (gitignored)
+└── results/                     # Experiment outputs (gitignored)
 ```
 
+## Team Split
+
+| Member | Focus |
+|--------|-------|
+| **Second group** | Introduction to ensemble classifiers, Learn++ background |
+| **Our group** | MRI feature extraction, dataset pipeline, implementation, results |
+
 ### Key Documents (start here)
-- **[01_ROADMAP.md](output_improved_v2/01_ROADMAP.md)** — Project phases and governance
-- **[02_ARCHITECTURE.md](output_improved_v2/02_ARCHITECTURE.md)** — System architecture and scoring formula
-- **[03_EXPERIMENT_PLAN.md](output_improved_v2/03_EXPERIMENT_PLAN.md)** — Experiment matrix and metrics
-- **[06_LEARNPP_ALGORITHM.md](output_improved_v2/06_LEARNPP_ALGORITHM.md)** — All equations, flow, worked examples
+- **[01_ROADMAP.md](planning_seed/01_ROADMAP.md)** — Project phases and governance
+- **[03_EXPERIMENT_PLAN.md](planning_seed/03_EXPERIMENT_PLAN.md)** — Experiment matrix, baselines, metrics
+- **[06_LEARNPP_ALGORITHM.md](planning_seed/06_LEARNPP_ALGORITHM.md)** — All equations, flow, worked examples
+- **[01_learnpp_walkthrough.ipynb](notebooks/01_learnpp_walkthrough.ipynb)** — Running Learn++ implementation
