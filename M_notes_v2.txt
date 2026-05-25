@@ -1,0 +1,11 @@
+we have to use 2 classifiers it would be nice if one was from the paper, we have to compare alghoritms 
+what done for implementation, dataset why this, 
+we can use another paper for accuracies 
+we can give info what is state of art now 
+we can divide introduction for 2 groups 
+presentation to do + report after presentation 
+we have to use one of the implementations from the results and explain results we can
+initial: ola does intro on ensemble classifier, we do more on vectorizing fmri images 
+
+
+ mnist in csv kaggle - optical character recognition 
