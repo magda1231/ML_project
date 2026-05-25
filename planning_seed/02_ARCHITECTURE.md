@@ -145,10 +145,12 @@ The project compares **one simple and one complex base learner** head-to-head wi
 
 | Role | Selected Model | Rationale |
 |------|---------------|----------|
-| Simple | **Decision Tree (depth 2)** | Canonical boosting base learner, high diversity under reweighting, fast, interpretable |
-| Complex | **Gradient Boosting (XGBoost/LightGBM)** | Top performer on tabular/engineered features, shared tree-based intuition enables clean capacity comparison |
+| From paper | **MLP (Multi-Layer Perceptron)** | Base classifier from the original Learn++ paper (Polikar et al., 2001); used for OCR; neural network with higher capacity |
+| Recommended | **Decision Tree (depth-limited)** | Used in later Learn++ variants (Learn++.NSE, Elwell & Polikar, 2011); research suggests strong performance on MRI data; interpretable, fast |
 
-**Why this pair**: Both are tree-based, which isolates the effect of model capacity (single shallow tree vs boosted ensemble) while keeping feature assumptions consistent. This makes the comparison interpretable and fair.
+**Why this pair**: MLP is the original paper's classifier, satisfying the requirement to use one algorithm from the paper. Decision Tree is a well-studied alternative in the Learn++ family that excels on structured/medical data. Comparing a neural network vs a tree-based model tests fundamentally different learning paradigms within the same incremental framework.
+
+**Historical note**: The original Learn++ (2001) used MLP/SLP for OCR tasks. Later Learn++ variants (Learn++.NSE, 2011) adopted Decision Trees as base learners. Gradient Boosting was never used in the original Learn++ papers.
 
 See [05_CLASSIFIER_CATALOG.md](05_CLASSIFIER_CATALOG.md) for the full candidate pool and selection rationale.
 

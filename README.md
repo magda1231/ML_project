@@ -14,9 +14,9 @@ Phase 1 (active): algorithm design and base learner selection — documentation 
 
 ### Objectives
 1. Evaluate Learn++ as the primary incremental learning framework (alternatives acknowledged).
-2. Compare 1 simple base learner (Decision Tree, depth 2) vs 1 complex base learner (Gradient Boosting) — as required by assignment.
-3. Decision Tree chosen as the base learner from the original Learn++ paper (Polikar et al., 2001).
-4. Define data strategy: Fashion-MNIST (public benchmark) + medical MRI (OASIS-3/BraTS/OpenNeuro).
+2. Compare 2 base learners: MLP (from the original Learn++ paper) vs Decision Tree (recommended for MRI data, used in later Learn++ variants).
+3. MLP chosen as it is the base classifier from the original Learn++ paper (Polikar et al., 2001). Decision Tree used in Learn++.NSE (Elwell & Polikar, 2011) and shown to perform well on medical imaging tasks.
+4. Define data strategy: Fashion-MNIST (public benchmark) + medical MRI (BraTS).
 5. Document Learn++ equations, flow, and decision logic.
 6. Produce planning package for implementation handoff.
 

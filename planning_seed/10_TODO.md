@@ -33,7 +33,7 @@ results/           # .gitignored, experiment outputs go here
 ## Learn++ Preparation
 
 - [ ] Define batch sequence D₁, D₂, D₃ with class distribution notes.
-- [ ] Lock hyperparameter search spaces for Decision Tree and Gradient Boosting.
+- [ ] Lock hyperparameter search spaces for MLP and Decision Tree.
 - [ ] Agree on fixed CompositeScore weights (currently 0.40/0.15/0.15/0.15/0.15).
 - [ ] Decide on Learn++ iteration budget T_k per batch.
 
@@ -42,10 +42,10 @@ results/           # .gitignored, experiment outputs go here
 - [x] Learn++ scaffold created (notebooks/01_learnpp_walkthrough.ipynb).
 - [ ] Validate Learn++ on synthetic data (run notebook cells 4–6).
 - [ ] Build ROI feature extraction (src/features/) using BraTS segmentation masks.
-- [ ] Run EXP-01: Decision Tree vs Gradient Boosting on Fashion-MNIST.
-- [ ] Run EXP-02: Decision Tree vs Gradient Boosting on BraTS MRI.
+- [ ] Run EXP-01: MLP vs Decision Tree on Fashion-MNIST.
+- [ ] Run EXP-02: MLP vs Decision Tree on BraTS MRI.
 - [ ] Compare results: CompositeScore + Wilcoxon significance test.
-- [ ] Produce static Gradient Boosting upper-bound baseline (no Learn++).
+- [ ] Produce static MLP upper-bound baseline (trained on all data, no Learn++).
 
 ## Presentation & Report
 

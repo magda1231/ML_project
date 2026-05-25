@@ -10,10 +10,15 @@ This file documents all classifier candidates considered and the rationale for t
 
 | Role | Model | Why Selected |
 |------|-------|--------------|
-| **Simple** | Decision Tree (depth 2) | Canonical boosting base learner, high diversity under reweighting, fast, interpretable, well-studied in Learn++ literature |
-| **Complex** | Gradient Boosting (XGBoost/LightGBM) | Top tabular performer, shared tree-based family enables clean capacity comparison, flexible error reduction |
+| **From paper** | MLP (Multi-Layer Perceptron) | The base classifier from the original Learn++ paper (Polikar et al., 2001); used for OCR; satisfies requirement to use one algorithm from the paper |
+| **Recommended** | Decision Tree (depth-limited) | Used in later Learn++ variants (Learn++.NSE, 2011); strong performance on medical/structured data; interpretable; well-suited to ROI-based features |
 
-**Why this pair over others**: Both are tree-based, which isolates the variable being tested (model capacity) while keeping feature assumptions, split logic, and interpretability consistent. A Decision Tree is literally a single-tree version of what Gradient Boosting builds as an ensemble — this makes the comparison clean and the results easy to communicate.
+**Why this pair**: The assignment requires one classifier from the original paper (MLP). Decision Tree is the recommended choice for MRI data based on research and its proven use in later Learn++ publications. This tests two fundamentally different learning paradigms (neural network vs tree-based) within the same incremental framework.
+
+**Clarification on Learn++ history**:
+- **Original Learn++ (Polikar et al., 2001)**: Used MLP / Single-Layer Perceptron as base classifier, applied to OCR.
+- **Later Learn++ variants (Learn++.NSE, Elwell & Polikar, 2011)**: Adopted Decision Trees as base learners.
+- **Gradient Boosting**: Never used in original Learn++ papers. It is itself an ensemble of decision trees (boosted), which would create a nested-ensemble architecture if placed inside Learn++.
 
 ---
 

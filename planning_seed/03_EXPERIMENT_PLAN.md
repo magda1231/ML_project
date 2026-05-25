@@ -14,14 +14,14 @@ The project compares **one simple and one complex base learner** head-to-head wi
 
 | Role | Model | Key Properties |
 |------|-------|----------------|
-| **Simple** | Decision Tree (depth 2) | Low capacity, fast, interpretable, canonical boosting base learner |
-| **Complex** | Gradient Boosting (XGBoost/LightGBM) | High capacity, top tabular performer, tree-based (same family as simple) |
+| **From paper** | MLP (Multi-Layer Perceptron) | The base classifier from the original Learn++ paper (Polikar et al., 2001); neural network; higher capacity |
+| **Recommended** | Decision Tree (depth-limited) | Used in Learn++.NSE (Elwell & Polikar, 2011); interpretable, fast; research shows strong results on MRI/medical data |
 
-**Why this pair**: Both are tree-based, which isolates the effect of model capacity (single shallow tree vs boosted ensemble of trees) while keeping feature assumptions consistent. This makes the comparison clean and interpretable.
+**Why this pair**: The assignment requires using one classifier from the original paper — that is MLP (used for OCR in Learn++, 2001). Decision Tree was adopted in later Learn++ variants and is well-suited to structured features from medical imaging (ROI-based). This tests whether Learn++'s incremental mechanism works better with a neural network (original design) or a tree-based model (domain-appropriate choice).
 
 See [05_CLASSIFIER_CATALOG.md](05_CLASSIFIER_CATALOG.md) for the full candidate pool considered and selection rationale.
 
-**Paper reference**: The Decision Tree is the base learner used in the original Learn++ paper (Polikar et al., 2001), which validates our choice as a direct replication baseline. Gradient Boosting serves as the modern high-capacity counterpart.
+**Paper clarification**: The original Learn++ paper (Polikar et al., 2001) used MLP/Single-Layer Perceptron for OCR. Decision Trees appeared in later Learn++ variants (Learn++.NSE, Elwell & Polikar, 2011). Gradient Boosting was not used in any original Learn++ publication.
 
 ---
 
@@ -31,8 +31,8 @@ See [05_CLASSIFIER_CATALOG.md](05_CLASSIFIER_CATALOG.md) for the full candidate 
 
 | Source | Dataset | Base Learner | Reported Accuracy | Notes |
 |--------|---------|-------------|-------------------|-------|
-| Polikar et al., 2001 (original Learn++) | Optical character recognition | Decision Tree (CART) | ~85–92% | Incremental, multiple batches |
-| Polikar et al., 2001 | VOC dataset | Decision Tree | ~80–88% | Demonstrates batch stability |
+| Polikar et al., 2001 (original Learn++) | Optical character recognition | MLP / Single-Layer Perceptron | ~85–92% | Incremental, multiple batches |
+| Polikar et al., 2001 | VOC dataset | MLP | ~80–88% | Demonstrates batch stability |
 | Learn++.NSE (Elwell & Polikar, 2011) | Various | Decision Tree | 75–95% range | Non-stationary variant, concept drift |
 
 ### State of the Art for Incremental/Continual Learning (2023–2026)
@@ -47,12 +47,12 @@ See [05_CLASSIFIER_CATALOG.md](05_CLASSIFIER_CATALOG.md) for the full candidate 
 
 ### How to Use These Baselines
 
-1. **Our Decision Tree in Learn++** should aim to match or approach the original paper's results (~85–92% on similar complexity tasks).
-2. **Our Gradient Boosting in Learn++** should test whether added capacity pushes beyond what the original paper achieved.
-3. **Static Gradient Boosting** (trained on all data at once) serves as an upper bound — incremental methods will typically be slightly below this.
+1. **Our MLP in Learn++** should aim to match or approach the original paper's results (~85–92% on similar complexity tasks).
+2. **Our Decision Tree in Learn++** tests whether a tree-based model (recommended for MRI) outperforms the original neural network approach.
+3. **Static MLP** (trained on all data at once) serves as an upper bound — incremental methods will typically be slightly below this.
 4. **Report our results relative to these baselines** in the final presentation/report.
 
-> These numbers are indicative ranges. Exact comparison requires matching dataset complexity. Our experiments will produce our own baselines on Fashion-MNIST and OASIS-3.
+> These numbers are indicative ranges. Exact comparison requires matching dataset complexity. Our experiments will produce our own baselines on Fashion-MNIST and BraTS.
 
 ---
 
@@ -60,15 +60,15 @@ See [05_CLASSIFIER_CATALOG.md](05_CLASSIFIER_CATALOG.md) for the full candidate 
 
 **Total experiments**: 2 (one pair tested on each data track).
 
-| Experiment ID | Simple Model | Complex Model | Data Track |
-|--------------|-------------|---------------|------------|
-| EXP-01 | Decision Tree (depth 2) | Gradient Boosting | Public benchmark (Fashion-MNIST) |
-| EXP-02 | Decision Tree (depth 2) | Gradient Boosting | Medical NIfTI (OASIS-3) |
+| Experiment ID | From Paper | Recommended | Data Track |
+|--------------|-----------|-------------|------------|
+| EXP-01 | MLP (Polikar et al., 2001) | Decision Tree (Learn++.NSE, 2011) | Public benchmark (Fashion-MNIST) |
+| EXP-02 | MLP (Polikar et al., 2001) | Decision Tree (Learn++.NSE, 2011) | Medical MRI (BraTS) |
 
 Each experiment runs both models through the same Learn++ pipeline on the same batch sequence, then compares results using the CompositeScore and statistical significance testing.
 
 **What we are NOT doing**:
-- Not testing multiple pairs (project scope is 1 simple + 1 complex).
+- Not testing multiple pairs (project scope is MLP vs Decision Tree).
 - Not testing models in isolation outside Learn++ (defeats the comparison purpose).
 - Not mixing data tracks within a single experiment (breaks reproducibility).
 
