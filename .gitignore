@@ -1,10 +1,7 @@
 # Data (large files, downloaded locally)
 data/*
 !data/.gitkeep
-
-# Results (generated during experiments)
-results/*
-!results/.gitkeep
+notebooks/data/
 
 # Python
 __pycache__/
