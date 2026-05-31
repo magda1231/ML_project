@@ -68,3 +68,18 @@ Non-parametric statistical test for paired samples. We use it to determine if ML
 **Why weighting doesn't fully solve it**: Learn++ uses weighted voting (log(1/β_t)), so better classifiers get louder votes. In theory, a well-trained D₃ hypothesis could outweigh a mediocre D₁ one. In practice, 30 old hypotheses all confidently voting for class 0 will still overpower 10 new hypotheses voting for class 9 — the numbers matter.
 
 **How to verify**: Compare per-class recall for classes 0–3 (seen since D₁, backed by 30 hypotheses) vs classes 7–9 (seen only from D₃, backed by 10 hypotheses). If old classes have significantly higher recall, this bias is real and measurable in our experiment.
+
+#### Proposed test: Hypothesis Imbalance Impact
+
+To isolate whether the imbalance causes measurable harm, run these comparisons:
+
+| Test | What it shows |
+|------|---------------|
+| **A. Per-class recall gap** | After D₃, compare mean recall of classes 0–3 vs 7–9. Gap = evidence of imbalance. |
+| **B. Reverse batch order** | Run with D₁=classes 7–9, D₃=classes 0–3. If "first introduced" always wins regardless of which classes they are → purely numerical effect, not class difficulty. |
+| **C. Equal-class baseline** | Run with all 3 batches containing all 10 classes (random split, no class introduction). Every class gets 30 hypotheses. Compare final per-class recall to our current design. |
+| **D. Vote weight analysis** | After training, for each test sample compute total vote weight from D₁ hypotheses vs D₃ hypotheses. Quantify how much D₁ dominates the vote. |
+
+**Minimum viable test**: A + B (quick, no code changes to Learn++ needed — just change batch order and read confusion matrix). If A shows a gap and B confirms it flips with reversed order, we have strong evidence.
+
+**Nice-to-have**: C provides the "ideal" baseline; D gives mechanistic understanding of *why*.
