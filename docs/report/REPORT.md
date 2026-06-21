@@ -245,10 +245,10 @@ Increasing DT depth from 5 → 300 improves F1 from 0.732 to 0.796 (+8.7%), narr
 
 #### 3.5.2 Change of Macro F1 per Batch
 
-![EXP-01 Comparison](../results/exp01_fashion_mnist_comparison_all.png)
+![EXP-01 Comparison](https://raw.githubusercontent.com/magda1231/ML_project/v0.0.3.5/results/exp01_fashion_mnist_comparison_all.png)
 *Figure 1: Fashion-MNIST — F1, Accuracy, Training Time, and Ensemble Growth per batch (seed=42). MLP vs Decision Tree.*
 
-![EXP-02 Comparison](../results/exp02_digits_comparison.png)
+![EXP-02 Comparison](https://raw.githubusercontent.com/magda1231/ML_project/v0.0.3.5/results/exp02_digits_comparison.png)
 *Figure 2: MNIST Digits — F1, Balanced Accuracy, Training Time, and Ensemble Growth per batch (seed=42). MLP vs DT vs DT-Strong (depth=300).*
 
 Both plots show MLP consistently above DT at every batch step. The DT-Strong variant (depth=300) narrows the gap on MNIST Digits while maintaining DT-level training speed.
@@ -314,10 +314,10 @@ MLP's training cost scales with data complexity (more iterations needed on harde
 
 #### 3.5.8 Confusion Matrices
 
-![EXP-01 Confusion Matrices](../results/exp01_confusion_matrices.png)
+![EXP-01 Confusion Matrices](https://raw.githubusercontent.com/magda1231/ML_project/v0.0.3.5/results/exp01_confusion_matrices.png)
 *Figure 3: Fashion-MNIST confusion matrices (normalized, seed=42). MLP (F1=0.467) shows clearer diagonal; DT (F1=0.198) confuses visually similar classes (Shirt/Pullover/Coat collapse to near-zero).*
 
-![EXP-02 Confusion Matrices](../results/exp02_mnist_confusion_matrices.png)
+![EXP-02 Confusion Matrices](https://raw.githubusercontent.com/magda1231/ML_project/v0.0.3.5/results/exp02_mnist_confusion_matrices.png)
 *Figure 4: MNIST Digits confusion matrices (normalized, seed=42). MLP achieves strong diagonal across all digits; DT struggles with later-introduced digits due to catastrophic forgetting.*
 
 ### 3.6 Cross-Dataset Comparison
