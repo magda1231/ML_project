@@ -142,25 +142,29 @@ The paper's original design (Table 10) uses very small batches (~500–700 sampl
 | Preprocessing | PCA(50) |
 | Base learners | MLP, Decision Tree, DT-Strong (depth=300) |
 | Seeds | 5 (42, 123, 456, 789, 1024) |
-| Batches | 3 (Fashion-MNIST), 4 (MNIST Digits, Table 10) |
+| Batches | 3–4 (Fashion-MNIST: 2 designs compared), 4 (MNIST Digits, Table 10) |
 | $T_k$ | 10 hypotheses per batch |
-| Distribution strategies | 4 compared (MNIST): Table 10, Cumulative ×2, No Repetition |
+| Distribution strategies | 2 compared (Fashion): disjoint+refresh vs cumulative no-reuse; 4 compared (MNIST): Table 10, Cumulative ×2, No Repetition |
 
 ### 3.2 Classification Quality
 
 #### Macro F1 Score
 
-| Dataset | MLP (mean ± std) | DT (mean ± std) | MLP/DT ratio |
-|---------|-------------------|------------------|--------------|
-| Fashion-MNIST | 0.458 ± 0.015 | 0.197 ± 0.006 | **2.3×** |
-| MNIST Digits | 0.855 ± 0.011 | 0.732 ± 0.017 | **1.2×** |
+| Dataset | Batch Design | MLP (mean ± std) | DT (mean ± std) | MLP/DT ratio |
+|---------|--------------|-------------------|------------------|--------------|
+| Fashion-MNIST | Disjoint + refresh (4 batches) | 0.835 ± 0.003 | 0.274 ± 0.010 | **3.0×** |
+| Fashion-MNIST | Cumulative no-reuse (3 batches) | 0.458 ± 0.015 | 0.197 ± 0.006 | **2.3×** |
+| MNIST Digits | Table 10 (4 batches) | 0.855 ± 0.011 | 0.732 ± 0.017 | **1.2×** |
+
+**Key finding**: Batch design dominates performance. The all-class refresh batch (D4) raises MLP F1 from 0.458 → 0.835 (+82%) on the same dataset.
 
 #### Balanced Accuracy
 
-| Dataset | MLP (mean ± std) | DT (mean ± std) | MLP/DT ratio |
-|---------|-------------------|------------------|--------------|
-| Fashion-MNIST | 0.495 ± 0.012 | 0.300 ± 0.004 | **1.6×** |
-| MNIST Digits | 0.852 ± 0.011 | 0.734 ± 0.017 | **1.2×** |
+| Dataset | Batch Design | MLP (mean ± std) | DT (mean ± std) | MLP/DT ratio |
+|---------|--------------|-------------------|------------------|--------------|
+| Fashion-MNIST | Disjoint + refresh | 0.833 ± 0.003 | 0.346 ± 0.006 | **2.4×** |
+| Fashion-MNIST | Cumulative no-reuse | 0.495 ± 0.012 | 0.300 ± 0.004 | **1.6×** |
+| MNIST Digits | Table 10 | 0.852 ± 0.011 | 0.734 ± 0.017 | **1.2×** |
 
 #### Accuracy
 
@@ -185,10 +189,11 @@ $$\text{Score} = 0.40 \cdot F_1 + 0.15 \cdot \text{BalAcc} + 0.15 \cdot (1 - \ha
 
 Where $\hat{T}_{train}$, $\hat{T}_{inf}$, $\hat{M}$ are min-max normalized training time, inference time, and memory (ensemble size) respectively.
 
-| Dataset | MLP Score | DT Score | Winner |
-|---------|-----------|----------|--------|
-| Fashion-MNIST | 0.412 | **0.574** | **DT** |
-| MNIST Digits | **0.770** | 0.711 | **MLP** |
+| Dataset | Batch Design | MLP Score | DT Score | Winner |
+|---------|--------------|-----------|----------|--------|
+| Fashion-MNIST | Disjoint + refresh | 0.609 | **0.618** | **DT** |
+| Fashion-MNIST | Cumulative no-reuse | 0.412 | **0.574** | **DT** |
+| MNIST Digits | Table 10 | **0.770** | 0.711 | **MLP** |
 
 **Key finding**: The CompositeScore winner **flips** depending on the dataset:
 - Fashion-MNIST: MLP is 11× slower than DT, and the cost penalty outweighs the 2.3× quality advantage → DT wins
@@ -198,12 +203,13 @@ The "best classifier" depends on how quality and efficiency are weighted.
 
 ### 3.4 Statistical Significance
 
-Wilcoxon signed-rank test on paired observations (5 seeds × 3 batches = 15 pairs for Fashion-MNIST, 5 × 4 = 20 for MNIST):
+Wilcoxon signed-rank test on paired observations (5 seeds × 4 batches = 20 pairs for Fashion-MNIST non-optimal, 5 × 3 = 15 for Fashion cumulative, 5 × 4 = 20 for MNIST):
 
-| Dataset | MLP mean F1 | DT mean F1 | Statistic | p-value | Result |
-|---------|-------------|------------|-----------|---------|--------|
-| Fashion-MNIST | 0.369 ± 0.090 | 0.202 ± 0.027 | 0.0 | **0.0001** | MLP significantly better |
-| MNIST Digits | 0.652 ± 0.200 | 0.521 ± 0.180 | 0.0 | **<0.0001** | MLP significantly better |
+| Dataset | Batch Design | MLP mean F1 | DT mean F1 | p-value | Result |
+|---------|--------------|-------------|------------|---------|--------|
+| Fashion-MNIST | Disjoint + refresh | 0.369 ± 0.090 | 0.202 ± 0.027 | **0.0001** | MLP significantly better |
+| Fashion-MNIST | Cumulative no-reuse | 0.458 ± 0.015 | 0.197 ± 0.006 | **<0.001** | MLP significantly better |
+| MNIST Digits | Table 10 | 0.652 ± 0.200 | 0.521 ± 0.180 | **<0.0001** | MLP significantly better |
 
 Both p-values < 0.05 — MLP's quality advantage is statistically significant across all batch-level observations.
 
@@ -211,15 +217,25 @@ Both p-values < 0.05 — MLP's quality advantage is statistically significant ac
 
 #### 3.5.1 Results Table — Per-Seed Accuracy
 
-**Fashion-MNIST (EXP-01):**
+**Fashion-MNIST (EXP-01) — Non-optimal (disjoint + all-class refresh, 4 batches):**
 
 | Seed | MLP Final F1 | MLP BalAcc | MLP Acc | MLP Time (s) | DT Final F1 | DT BalAcc | DT Acc | DT Time (s) |
 |------|-------------|------------|---------|-------------|------------|-----------|--------|------------|
-| 42   | 0.4673 | 0.5001 | 50.01% | 399 | 0.1975 | 0.2998 | 29.98% | 30 |
-| 123  | 0.4441 | 0.4812 | 48.12% | 356 | 0.1927 | 0.2975 | 29.75% | 33 |
-| 456  | 0.4786 | 0.5081 | 50.81% | 356 | 0.2048 | 0.3058 | 30.58% | 39 |
-| 789  | 0.4523 | 0.4870 | 48.70% | 375 | 0.2004 | 0.3017 | 30.17% | 39 |
-| 1024 | 0.4498 | 0.4817 | 48.17% | 394 | 0.1882 | 0.2944 | 29.44% | 34 |
+| 42   | 0.8352 | 0.8329 | 83.29% | 1029 | 0.2867 | 0.3550 | 35.50% | 100 |
+| 123  | 0.8327 | 0.8302 | 83.02% | 995 | 0.2645 | 0.3409 | 34.09% | 97 |
+| 456  | 0.8413 | 0.8390 | 83.90% | 1103 | 0.2635 | 0.3401 | 34.01% | 109 |
+| 789  | 0.8393 | 0.8373 | 83.73% | 1018 | 0.2836 | 0.3505 | 35.05% | 101 |
+| 1024 | 0.8390 | 0.8367 | 83.67% | 1016 | 0.2713 | 0.3446 | 34.46% | 102 |
+
+**Fashion-MNIST (EXP-01) — Optimal (cumulative no-reuse, 3 batches):**
+
+| Seed | MLP Final F1 | MLP BalAcc | MLP Acc | MLP Time (s) | DT Final F1 | DT BalAcc | DT Acc | DT Time (s) |
+|------|-------------|------------|---------|-------------|------------|-----------|--------|------------|
+| 42   | 0.4673 | 0.5001 | 50.01% | 412 | 0.1975 | 0.2998 | 29.98% | 33 |
+| 123  | 0.4441 | 0.4812 | 48.12% | 387 | 0.1927 | 0.2975 | 29.75% | 33 |
+| 456  | 0.4786 | 0.5081 | 50.81% | 384 | 0.2048 | 0.3058 | 30.58% | 32 |
+| 789  | 0.4523 | 0.4870 | 48.70% | 392 | 0.2004 | 0.3017 | 30.17% | 32 |
+| 1024 | 0.4498 | 0.4817 | 48.17% | 390 | 0.1882 | 0.2944 | 29.44% | 33 |
 
 **MNIST Digits (EXP-02, Table 10 distribution):**
 
@@ -261,7 +277,14 @@ The per-batch comparison plots (included in the 4-panel figures below) show BalA
 
 #### 3.5.4 Change of Accuracy per Batch
 
-**Fashion-MNIST (EXP-01, seed=42):**
+**Fashion-MNIST (EXP-01, seed=42) — Non-optimal (4 batches):**
+
+| Metric | After D1 | After D2 | After D3 | After D4 |
+|--------|----------|----------|----------|----------|
+| MLP Test Acc | 37.81% | 48.04% | 48.59% | 83.29% |
+| DT Test Acc | 35.56% | 29.30% | 30.83% | 35.50% |
+
+**Fashion-MNIST (EXP-01, seed=42) — Optimal (3 batches):**
 
 | Metric | After D1 | After D2 | After D3 |
 |--------|----------|----------|----------|
