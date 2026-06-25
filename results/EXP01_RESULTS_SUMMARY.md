@@ -5,119 +5,90 @@
 **Preprocessing**: PCA(n_components=50) — 86.3% variance retained  
 **Protocol**: Cumulative (Set 2) introducing classes in the same order as in the article (4 sequential batches based on `batch_classes_dist`)
 
-- **Batch 1**: Classes `[0, 2, 4, 6, 8]`
-- **Batch 2**: Classes `[0, 2, 4, 6, 1, 3, 5, 9]`
-- **Batch 3**: Classes `[0, 2, 4, 1, 3, 5, 9, 7]`
-- **Batch 4**: Classes `[0, 2, 6, 8, 3, 5, 9, 7]`  
-  **Seeds**: 5 (42, 123, 456, 789, 1024)  
-  **T_k**: 10 hypotheses per batch (total ensemble size = 40 hypotheses)  
-  **Total runtime**: ~10–12 min (MLP ~405–601s/seed, DT depth=5 ~35s/seed, DT depth=300 ~54s/seed)
+### Batch Composition Strategies
 
----
+#### Strategy and distribution as in `research paper`
 
-## Raw Results (per seed)
+| Class | Batch 1 | Batch 2 | Batch 3 | Batch 4 | Total Samples |
+| ----- | ------- | ------- | ------- | ------- | ------------- |
+| 0     | 100     | 50      | 50      | 25      | 225           |
+| 1     | 0       | 150     | 50      | 0       | 200           |
+| 2     | 100     | 50      | 50      | 25      | 225           |
+| 3     | 0       | 150     | 50      | 25      | 225           |
+| 4     | 100     | 50      | 50      | 0       | 200           |
+| 5     | 0       | 150     | 50      | 25      | 225           |
+| 6     | 100     | 50      | 0       | 100     | 250           |
+| 7     | 0       | 0       | 150     | 50      | 200           |
+| 8     | 100     | 0       | 0       | 150     | 250           |
+| 9     | 0       | 50      | 100     | 50      | 200           |
 
-### MLP (Polikar et al., 2001 — original paper)
+#### Strategy: `cumulative`
 
-| Seed | Final Acc | Final F1 (Macro) | Final BalAcc | Train Time |
-| ---- | --------- | ---------------- | ------------ | ---------- |
-| 42   | 87.46%    | 0.8740           | 0.8746       | 412.9s     |
-| 123  | 87.35%    | 0.8727           | 0.8735       | 405.4s     |
-| 456  | 87.54%    | 0.8747           | 0.8754       | 410.3s     |
-| 789  | 87.10%    | 0.8703           | 0.8710       | 405.9s     |
-| 1024 | 87.22%    | 0.8714           | 0.8722       | 601.6s     |
+| Batch   | Class IDs           |
+| ------- | ------------------- |
+| Batch 1 | `[0,2,4]`           |
+| Batch 2 | `[0,2,6,1,5]`       |
+| Batch 3 | `[0,8,4,6,1,3,7,9]` |
+| Batch 4 | `[4,6,1,3,5,9,8]`   |
 
-### Decision Tree (depth=5 — recommended baseline)
+**Outcome**: Introduces heavy overlap; forces model to continuously reconcile old and new boundaries.
 
-| Seed | Final Acc | Final F1 (Macro) | Final BalAcc | Train Time |
-| ---- | --------- | ---------------- | ------------ | ---------- |
-| 42   | 73.74%    | 0.7393           | 0.7374       | 34.6s      |
-| 123  | 73.08%    | 0.7338           | 0.7308       | 34.9s      |
-| 456  | 73.74%    | 0.7415           | 0.7374       | 34.9s      |
-| 789  | 74.28%    | 0.7458           | 0.7428       | 35.3s      |
-| 1024 | 74.24%    | 0.7467           | 0.7424       | 34.6s      |
+#### Strategy: `dist`
 
-### Decision Tree Stronger (depth=300 — high-capacity variant)
+| Batch   | Class IDs           |
+| ------- | ------------------- |
+| Batch 1 | `[0,2,4,6,8]`       |
+| Batch 2 | `[0,2,4,6,1,3,5,9]` |
+| Batch 3 | `[0,2,4,1,3,5,9,7]` |
+| Batch 4 | `[0,2,6,8,3,5,9,7]` |
 
-| Seed | Final Acc | Final F1 (Macro) | Final BalAcc | Train Time |
-| ---- | --------- | ---------------- | ------------ | ---------- |
-| 42   | 82.87%    | 0.8272           | 0.8287       | 55.2s      |
-| 123  | 82.71%    | 0.8259           | 0.8271       | 55.4s      |
-| 456  | 82.91%    | 0.8273           | 0.8291       | 54.5s      |
-| 789  | 82.28%    | 0.8215           | 0.8228       | 54.1s      |
-| 1024 | 82.84%    | 0.8268           | 0.8284       | 53.1s      |
+**Outcome**: Sequential introduction with growing set; best for measuring cumulative learning progress.
 
----
+#### Strategy: `no_rep`
 
-## CompositeScore (seed=42)
+| Batch   | Class IDs       |
+| ------- | --------------- |
+| Batch 1 | `[0,2,4,6,8]`   |
+| Batch 2 | `[1,3,5]`       |
+| Batch 3 | `[7,9]`         |
+| Batch 4 | `[0,1,3,4,8,7]` |
 
-Formula: `0.40·MacroF1 + 0.15·BalancedAcc + 0.15·(1-TrainTimeNorm) + 0.15·(1-InfTimeNorm) + 0.15·(1-MemoryNorm)`
+**Outcome**: Disjoint introduction; highlights forgetting phenomena in early stages of ensemble growth.
 
-_Note: Normalization scales from min (0.0) to max (1.0) across the evaluated models. High normalized values represent long runtimes or large memory footprints, meaning `1 - Norm` rewards efficient models._
+### EXP-01 Results (Fashion-MNIST + PCA(50), 5 seeds)
 
-| Metric              | MLP (paper) | DT (depth=5)        | DT Stronger (depth=300) |
-| ------------------- | ----------- | ------------------- | ----------------------- |
-| MacroF1             | 0.8740      | 0.7393              | 0.8272                  |
-| BalancedAcc         | 0.8746      | 0.7374              | 0.8287                  |
-| TrainTimeNorm       | 1.0000      | 0.0000              | 0.0485                  |
-| InferenceTimeNorm   | 1.0000      | 0.0000              | 0.2989                  |
-| MemoryNorm          | 0.0000      | 0.0000              | 0.0000                  |
-| **COMPOSITE SCORE** | **0.6308**  | **0.8563** ← Winner | **0.8531**              |
+**Setup**: $T_k=10$ hypotheses per batch, 5 random seeds.
 
-- **Total train time**: MLP = 423.9s, DT = 34.7s, DT Stronger = 53.6s (DT depth=5 is **12.2× faster** than MLP, DT depth=300 is **7.9× faster**)
-- **Total inference time**: MLP = 1.7s, DT = 1.4s, DT Stronger = 1.5s
-- **Memory (ensemble size)**: All = 40 hypotheses (identical, T_k=10 × 4 batches)
+| Metric                        | MLP (paper)     | Decision Tree (depth=5) | Decision Tree Stronger (depth=300) | Winner            |
+| ----------------------------- | --------------- | ----------------------- | ---------------------------------- | ----------------- |
+| **Final Accuracy**            | 87.10% – 87.54% | 73.08% – 74.28%         | 82.60% – 82.92%                    | **MLP**           |
+| **Final F1 (Macro)**          | 87.03% – 87.47% | 73.38% – 74.67%         | 82.45% – 82.78%                    | **MLP**           |
+| **Final BalAcc**              | 87.10% – 87.54% | 73.08% – 74.28%         | 82.60% – 82.92%                    | **MLP**           |
+| **Total Training Time**       | ~405s – 601s    | **~35s**                | ~55s                               | **DT (depth=5)**  |
+| **CompositeScore** (Seed 42)  | 0.6308          | **0.8563**              | 0.8531                             | **DT (depth=5)**  |
+| **Wilcoxon p-value (vs MLP)** | —               | $1.907 \times 10^{-6}$  | $1.907 \times 10^{-6}$             | **MLP (Quality)** |
 
----
+### Interpretation & Deep Dive
 
-## Statistical Significance (Wilcoxon Signed-Rank)
+- **Classification Quality**: The MLP (the original paper's classifier) remains the superior model in terms of accuracy and F1 score, outperforming the basic Decision Tree by ~13.1 percentage points and the Stronger Decision Tree by ~4.7 percentage points.
+- **Tree Depth Impact**: Restricting tree depth to 5 (the recommended setting for medical/tabular data) is insufficient for image features even after PCA. However, increasing `max_depth` to 300 dramatically bridges the quality gap, improving the F1 score from ~74.2% to ~82.6%, while only increasing the training time slightly (from ~35s to ~55s).
+- **The Quality-Cost Trade-Off**: Although MLP delivers the best classification performance, it is computationally expensive (taking up to 11–17× longer to train than the decision trees). Consequently, under the balanced **CompositeScore** formula (which weights F1 at 40%, Balanced Accuracy at 15%, and penalizes training time, inference time, and memory footprint at 15% each), the **Decision Tree** wins (0.8563 vs 0.6308 for MLP).
+- **Statistical Significance**: The Wilcoxon signed-rank test across all 20 paired observations (5 seeds × 4 batches) yields $p \approx 1.907 \times 10^{-6}$ for both DT variants compared to MLP, demonstrating that MLP's quality advantage is highly statistically significant.
+
+### Statistical Significance (Wilcoxon Signed-Rank)
 
 - **Paired observations**: 20 (5 seeds × 4 batches)
-- **MLP vs. DT (depth=5)**:
-  - MLP mean F1 (all batches): 0.6634 ± 0.2345
-  - DT mean F1 (all batches): 0.5447 ± 0.1876
-  - Wilcoxon statistic: 0.0
-  - p-value: $1.907 \times 10^{-6}$
-  - **Result**: MLP performs significantly better than DT depth=5 (p < 0.05)
-- **MLP vs. DT Stronger (depth=300)**:
-  - MLP mean F1 (all batches): 0.6634 ± 0.2345
-  - DT Stronger mean F1 (all batches): 0.6167 ± 0.2273
-  - Wilcoxon statistic: 0.0
-  - p-value: $1.907 \times 10^{-6}$
-  - **Result**: MLP performs significantly better than DT depth=300 (p < 0.05)
+- **MLP vs. DT (depth=5)**: $p \approx 1.907 \times 10^{-6}$ (Significant, MLP performs better)
+- **MLP vs. DT Stronger (depth=300)**: $p \approx 1.907 \times 10^{-6}$ (Significant, MLP performs better)
 
----
+### Key questions answered:
 
-## Interpretation
+- ✅ **Does MLP hold up as a superior learner for image data?** → Yes, strongly (F1 of ~87.3% vs DT's ~74.2%, $p \approx 1.91 \times 10^{-6}$).
+- ✅ **Is DT a viable alternative?** → Purely in terms of accuracy/F1 on image features, even a stronger DT lags behind MLP. However, for applications where resource constraints or deployment costs are critical, DT is extremely competitive.
+- ✅ **Quality-cost trade-off?** → If computation is penalized, the basic Decision Tree wins the CompositeScore (0.8563 vs MLP's 0.6308) due to being 12× faster to train.
+- ✅ **Statistically significant?** → Yes, the quality difference is highly statistically significant ($p \approx 1.91 \times 10^{-6}$).
 
-### 1. MLP clearly dominates on raw classification quality
-
-- **Final F1**: MLP 0.870–0.875 vs. DT depth=5 of 0.733–0.747 and DT Stronger of 0.821–0.827.
-- **Statistical significance**: $p \approx 1.91 \times 10^{-6}$ confirms the superiority of MLP's visual pattern representation over axis-aligned split strategies, even after PCA.
-- **Protocol shift impact**: In our previous evaluation with disjoint and refresh batches, scores were capped at ~0.45 F1 because model capabilities on newly introduced test classes were artificially restricted. Switching to the **Cumulative (Set 2)** scenario allows models to incrementally build and reinforce knowledge across 4 stages, yielding much more realistic final performances (~87% for MLP).
-
-### 2. High-capacity Decision Trees dramatically bridge the gap
-
-- **Tree Depth is Key**: Limiting tree depth to 5 (standard for medical datasets) restricts the ensemble capacity too severely, leading to a major performance drop on image features.
-- **Stronger DT (depth=300)**: By removing depth constraints, the Decision Tree ensemble learns much more complex decision boundaries. This single parameter change improves the final F1 score from **~74.2% to ~82.6%** (+8.4 percentage points) while incurring only a tiny computational overhead (total training time increases from ~35s to ~54s).
-
-### 3. The Quality-Cost Trade-Off
-
-- Although MLP delivers the best classification performance, it is computationally expensive, requiring up to 11–17× longer training times.
-- Under the balanced **CompositeScore** metric (which penalizes time and memory), the **Decision Trees win** (DT depth=5: 0.8563, DT Stronger: 0.8531 vs. MLP: 0.6308). This highlight that for real-time or resource-constrained applications, a high-capacity Decision Tree is an exceptionally strong, cost-effective alternative to MLP.
-
----
-
-## Key Findings for Report
-
-1. **MLP is the best quality model**: Validates the choice in the original paper, beating DT by ~13.1 pp and DT Stronger by ~4.7 pp with high statistical significance ($p < 0.0001$).
-2. **PCA is essential**: Noise-reduction from PCA(50) allows MLP to converge efficiently on fashion categories and yield stable, highly-generalizable boundary shapes.
-3. **DT Stronger is a major find**: Demonstrates that high-capacity (depth=300) trees can represent complex visual patterns well, closing most of the gap to MLP.
-4. **Decision Trees dominate CompositeScore**: Extremely fast training and inference make DT variants highly appealing under resource constraints.
-
----
-
-## Remaining Work
+### Remaining work:
 
 1. **EXP-02**: Run on BraTS MRI (ROI features) — Decision Trees and stronger variants are expected to perform exceptionally well on structured tabular medical features, potentially closing the quality gap while maintaining their computational advantage.
 2. **Confusion Matrices Analysis**: Evaluate confusion matrices to identify specific class confusions (e.g., T-shirt vs Shirt, Pullover vs Coat) to see which features each base learner captures best.

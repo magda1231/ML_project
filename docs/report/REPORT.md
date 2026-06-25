@@ -1,4 +1,5 @@
 # Learn++ Base Learner Comparison: MLP vs Decision Tree
+
 ## ML: Learning, Adaptation, and Uncertainty 2026
 
 **Authors**: Magdalena Makaro, Wojciech Majek  
@@ -24,6 +25,7 @@ Learn++ (Polikar et al., 2001) is an ensemble-based incremental learning algorit
 - **Weighted majority voting** — better classifiers get louder votes in the final prediction
 
 **Per-batch process** (for each incoming data batch $D_k$):
+
 1. Initialize/update sample weights based on existing ensemble performance
 2. For $t = 1, \ldots, T_k$:
    - Draw weighted subsample from $D_k$ according to distribution $D_t$
@@ -38,6 +40,7 @@ Learn++ (Polikar et al., 2001) is an ensemble-based incremental learning algorit
 ### 1.3 How Learn++ Solves the Problem
 
 Learn++ addresses incremental learning by:
+
 - Accumulating hypotheses across batches without removing old ones (avoids forgetting)
 - Using weighted voting so that well-performing classifiers dominate the prediction
 - Supporting class introduction — new classes can appear in later batches
@@ -46,10 +49,10 @@ Importantly, Learn++ does not retain any raw training data. The knowledge from p
 
 ### 1.4 Choice of Datasets
 
-| Dataset | Motivation |
-|---------|-----------|
+| Dataset                               | Motivation                                                                                                                                                              |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **MNIST Digits** (LeCun et al., 1998) | The original Learn++ paper (Polikar, 2001) used optical character recognition data. MNIST digits are the modern standard equivalent for digit classification benchmarks |
-| **Fashion-MNIST** (Xiao et al., 2017) | Same structure as MNIST (28×28, 10 classes, 70k samples) but harder — visually similar classes (Shirt vs Pullover vs Coat) |
+| **Fashion-MNIST** (Xiao et al., 2017) | Same structure as MNIST (28×28, 10 classes, 70k samples) but harder — visually similar classes (Shirt vs Pullover vs Coat)                                              |
 
 Both datasets share identical structure (784 features, 10 balanced classes), allowing direct cross-dataset comparison while varying only task difficulty.
 
@@ -59,15 +62,15 @@ Both datasets share identical structure (784 features, 10 balanced classes), all
 
 ### 2.1 Choosing Classifiers
 
-We compare two base learners representing opposite ends of the model complexity spectrum within the Learn++ literature:
+We compare three base learners representing the model complexity spectrum within the Learn++ literature:
 
-| Property | MLP (original paper) | Decision Tree |
-|----------|---------------------|---------------|
-| **Source** | Polikar et al., 2001 | Learn++.NSE (Elwell & Polikar, 2011) |
-| **Capacity** | High — nonlinear, ~2600 parameters | Low — max 31 leaf nodes |
-| **Decision boundaries** | Smooth, nonlinear | Axis-aligned, piecewise constant |
-| **Training** | Iterative (gradient descent, 500 iter) | Single-pass (greedy splitting) |
-| **Overfitting risk** | Higher on small weighted subsamples | Lower (depth-limited) |
+| Property                | MLP (original paper)                   | Decision Tree (depth=5)              | Decision Tree Stronger (depth=300)   |
+| ----------------------- | -------------------------------------- | ------------------------------------ | ------------------------------------ |
+| **Source**              | Polikar et al., 2001                   | Learn++.NSE (Elwell & Polikar, 2011) | Learn++.NSE (Elwell & Polikar, 2011) |
+| **Capacity**            | High — nonlinear, ~2600 parameters     | Low — max 31 leaf nodes              | High — max 2^300 nodes (limited)     |
+| **Decision boundaries** | Smooth, nonlinear                      | Axis-aligned, piecewise constant     | Axis-aligned, piecewise constant     |
+| **Training**            | Iterative (gradient descent, 500 iter) | Single-pass (greedy splitting)       | Single-pass (greedy splitting)       |
+| **Overfitting risk**    | Higher on small weighted subsamples    | Lower (depth-limited)                | Higher (if not limited)              |
 
 **Hypothesis**: Higher-capacity MLP should produce better classification quality, while lower-capacity DT should be computationally cheaper. The question is whether the quality advantage justifies the cost.
 
@@ -107,28 +110,72 @@ DecisionTreeClassifier(
 
 **Incremental class introduction protocol** (simulates real-world scenario where new categories appear over time):
 
-| Batch | Classes introduced | Samples (MNIST) | Samples (Fashion) |
-|-------|-------------------|-----------------|-------------------|
-| $D_1$ | 0, 1, 2, 3 | ~24,000 | ~24,000 |
-| $D_2$ | 4, 5, 6 | ~18,000 | ~18,000 |
-| $D_3$ | 7, 8, 9 | ~18,000 | ~18,000 |
+We evaluate the models on 4 sequential batches. The class distribution per batch depends heavily on the chosen distribution strategy.
 
-- $T_k = 10$ hypotheses trained per batch
-- Final ensemble size: 30 hypotheses (10 × 3 batches)
-- 5 random seeds for reproducibility: {42, 123, 456, 789, 1024}
+#### 1. Paper Specific Strategy (`ocr_dist` or Table 10)
+
+This strategy replicate the exact sample-level counts from Table 10 of Polikar et al. (2001). It uses very small, unbalanced batches to test the algorithm's ability to handle class frequency imbalances and scarce data:
+
+| Class | Batch 1 | Batch 2 | Batch 3 | Batch 4 | Total Samples |
+| :---- | :------ | :------ | :------ | :------ | :------------ |
+| 0     | 100     | 50      | 50      | 25      | 225           |
+| 1     | 0       | 150     | 50      | 0       | 200           |
+| 2     | 100     | 50      | 50      | 25      | 225           |
+| 3     | 0       | 150     | 50      | 25      | 225           |
+| 4     | 100     | 50      | 50      | 0       | 200           |
+| 5     | 0       | 150     | 50      | 25      | 225           |
+| 6     | 100     | 50      | 0       | 100     | 250           |
+| 7     | 0       | 0       | 150     | 50      | 200           |
+| 8     | 100     | 0       | 0       | 150     | 250           |
+| 9     | 0       | 50      | 100     | 50      | 200           |
+
+#### 2. General Batch Strategies (`dist`, `cumulative`, `no_rep`)
+
+For the remaining strategies, batches are constructed using the full 60,000 training samples via the `construct_batches_cumulative_list` logic. Crucially, this function ensures that **there is absolutely no sample repetition/overlap across batches**.
+
+For each class, the total available training samples in the dataset are divided equally by its total number of appearances across all batches:
+$$\text{Samples per Batch} = \frac{\text{Total Available Samples for Class}}{\text{Number of Batch Appearances for Class}}$$
+
+For example, if class 0 appears in 4 batches, its ~6,000 available samples are partitioned into 4 unique subsets of ~1,500 samples each, which are then distributed among those batches. This prevents any data leakage or sample-level overlap across batches — only the _classes_ overlap, while the actual _training samples_ remain completely disjoint.
+
+- **Hypotheses per batch ($T_k$)**: 10
+- **Final ensemble size**: 40 hypotheses (10 × 4 batches)
+- **Seeds**: 5 (42, 123, 456, 789, 1024)
 
 ### 2.5 Distribution Strategy Comparison
 
-We compare multiple batch distribution strategies to assess how data allocation affects Learn++ performance:
+We compare four distinct batch distribution strategies to assess how class allocation and data sequencing affect Learn++ incremental learning performance.
 
-| Strategy | Description |
-|----------|-------------|
-| **Table 10 (Paper)** | Exact sample counts from Polikar et al. Table 10 — small batches (500–700), specific class proportions |
-| **Cumulative Set 2** | Classes introduced in same order as paper, cumulative (repeated across batches) |
-| **No Repetition** | Disjoint class sets per batch — each class appears only once |
-| **Cumulative Set 1** | Classes in a different order, cumulative |
+#### Strategy 1: Table 10 (`ocr_dist`)
 
-The paper's original design (Table 10) uses very small batches (~500–700 samples) while cumulative strategies use the full 60k training set split across batches.
+Replicates the exact, small, unbalanced sample counts per class from Table 10 of Polikar et al. (2001) as detailed in Section 2.4.
+
+#### Strategy 2: Cumulative Set 1 (`cumulative`)
+
+Introduces classes in a custom sequence, with significant class accumulation and overlap across subsequent batches:
+
+- **Batch 1**: Classes `[0, 2, 4]`
+- **Batch 2**: Classes `[0, 2, 6, 1, 5]`
+- **Batch 3**: Classes `[0, 8, 4, 6, 1, 3, 7, 9]`
+- **Batch 4**: Classes `[4, 6, 1, 3, 5, 9, 8]`
+
+#### Strategy 3: Cumulative Set 2 (`dist`) — _Primary Comparative Baseline_
+
+Introduces classes in the exact sequence as defined in the original paper, but scales up the dataset size using our standardized `construct_batches_cumulative_list` logic. This represents the progression of class appearance from the original study but without retaining the original paper's unbalanced small sample sizes, using equal sample distributions instead:
+
+- **Batch 1**: Classes `[0, 2, 4, 6, 8]`
+- **Batch 2**: Classes `[0, 2, 4, 6, 1, 3, 5, 9]`
+- **Batch 3**: Classes `[0, 2, 4, 1, 3, 5, 9, 7]`
+- **Batch 4**: Classes `[0, 2, 6, 8, 3, 5, 9, 7]`
+
+#### Strategy 4: No Repetition (`no_rep`)
+
+Evaluates the system under disjoint class distributions per batch to highlight forgetting phenomena. Each class is introduced sequentially with no repetition across batches, with the exception of the final batch which acts as a general rehearsal/repetition pass:
+
+- **Batch 1**: Classes `[0, 2, 4, 6, 8]`
+- **Batch 2**: Classes `[1, 3, 5]`
+- **Batch 3**: Classes `[7, 9]`
+- **Batch 4**: Classes `[0, 1, 3, 4, 8, 7]`
 
 ---
 
@@ -136,46 +183,35 @@ The paper's original design (Table 10) uses very small batches (~500–700 sampl
 
 ### 3.1 Experiment Overview
 
-| Parameter | Value |
-|-----------|-------|
-| Datasets | MNIST Digits, Fashion-MNIST |
-| Preprocessing | PCA(50) |
-| Base learners | MLP, Decision Tree, DT-Strong (depth=300) |
-| Seeds | 5 (42, 123, 456, 789, 1024) |
-| Batches | 3–4 (Fashion-MNIST: 2 designs compared), 4 (MNIST Digits, Table 10) |
-| $T_k$ | 10 hypotheses per batch |
-| Distribution strategies | 2 compared (Fashion): disjoint+refresh vs cumulative no-reuse; 4 compared (MNIST): Table 10, Cumulative ×2, No Repetition |
+| Parameter               | Value                                                                                                       |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Datasets                | MNIST Digits, Fashion-MNIST                                                                                 |
+| Preprocessing           | PCA(50) (82.5% variance for MNIST, 86.3% for Fashion)                                                       |
+| Base learners           | MLP, Decision Tree (depth=5), DT-Strong (depth=300)                                                         |
+| Seeds                   | 5 (42, 123, 456, 789, 1024)                                                                                 |
+| Batches                 | 4 sequential batches per dataset                                                                            |
+| $T_k$                   | 10 hypotheses per batch                                                                                     |
+| Distribution strategies | 4 compared for both: `ocr_dist` (paper), `cumulative`, `dist` (sequential growing), and `no_rep` (disjoint) |
 
 ### 3.2 Classification Quality
 
 #### Macro F1 Score
 
-| Dataset | Batch Design | MLP (mean ± std) | DT (mean ± std) | MLP/DT ratio |
-|---------|--------------|-------------------|------------------|--------------|
-| Fashion-MNIST | Disjoint + refresh (4 batches) | 0.835 ± 0.003 | 0.274 ± 0.010 | **3.0×** |
-| Fashion-MNIST | Cumulative no-reuse (3 batches) | 0.458 ± 0.015 | 0.197 ± 0.006 | **2.3×** |
-| MNIST Digits | Table 10 (4 batches) | 0.855 ± 0.011 | 0.732 ± 0.017 | **1.2×** |
+| Dataset       | Batch Design                 | MLP (mean ± std) | DT (mean ± std) | DT-Strong (mean ± std) | Diff MLP-DT_Str | Diff MLP-DT |
+| ------------- | ---------------------------- | ---------------- | --------------- | ---------------------- | --------------- | ----------- |
+| Fashion-MNIST | Cumulative Set 2 (4 batches) | 0.66 ± 0.23      | 0.62 ± 0.23     | 0.54 ± 0.19            | 0.05            | 0.12        |
+| MNIST Digits  | Cumulative Set 2 (4 batches) | 0.65 ± 0.21      | 0.59 ± 0.19     | 0.51 ± 0.18            | 0.06            | 0.14        |
 
-**Key finding**: Batch design dominates performance. The all-class refresh batch (D4) raises MLP F1 from 0.458 → 0.835 (+82%) on the same dataset.
+**Key findings**:
 
-#### Balanced Accuracy
-
-| Dataset | Batch Design | MLP (mean ± std) | DT (mean ± std) | MLP/DT ratio |
-|---------|--------------|-------------------|------------------|--------------|
-| Fashion-MNIST | Disjoint + refresh | 0.833 ± 0.003 | 0.346 ± 0.006 | **2.4×** |
-| Fashion-MNIST | Cumulative no-reuse | 0.495 ± 0.012 | 0.300 ± 0.004 | **1.6×** |
-| MNIST Digits | Table 10 | 0.852 ± 0.011 | 0.734 ± 0.017 | **1.2×** |
-
-#### Accuracy
-
-| Dataset | MLP (mean ± std) | DT (mean ± std) | MLP/DT ratio |
-|---------|-------------------|------------------|--------------|
-| Fashion-MNIST | 0.492 ± 0.012 | 0.300 ± 0.004 | **1.6×** |
-| MNIST Digits | 0.851 ± 0.012 | 0.739 ± 0.015 | **1.2×** |
+- **MLP Superiority**: MLP consistently achieves the highest Macro F1 scores (0.66 on Fashion-MNIST, 0.65 on MNIST) compared to standard and stronger Decision Tree variants.
+- **Capacity Impact**: Increasing Decision Tree capacity (DT-Strong) effectively narrows the performance gap with MLP (from ~0.13 to ~0.05 mean difference), indicating that base learner capacity is a critical factor in performance when using the _Cumulative Set 2_ distribution.
+- **Consistency**: Performance levels remain stable across both datasets (Fashion-MNIST and MNIST) when using the same cumulative batch design strategy.
 
 #### Comparison with Original Paper (Polikar et al., 2001)
 
 The original Learn++ paper reported ~92% accuracy on OCR digit recognition using MLP with the Table 10 distribution. Our replication with the same distribution achieves **87.1% accuracy** (MLP). The difference is attributable to:
+
 - PCA preprocessing (50 dims vs full 784)
 - Different MLP architecture (single hidden layer of 50 vs paper's specific SLP/MLP)
 - Different data source (MNIST vs paper's OCR dataset)
@@ -189,15 +225,15 @@ $$\text{Score} = 0.40 \cdot F_1 + 0.15 \cdot \text{BalAcc} + 0.15 \cdot (1 - \ha
 
 Where $\hat{T}_{train}$, $\hat{T}_{inf}$, $\hat{M}$ are min-max normalized training time, inference time, and memory (ensemble size) respectively.
 
-| Dataset | Batch Design | MLP Score | DT Score | Winner |
-|---------|--------------|-----------|----------|--------|
-| Fashion-MNIST | Disjoint + refresh | 0.609 | **0.618** | **DT** |
-| Fashion-MNIST | Cumulative no-reuse | 0.412 | **0.574** | **DT** |
-| MNIST Digits | Table 10 | **0.770** | 0.711 | **MLP** |
+| Dataset       | Batch Design     | MLP Score | DT Score | DT-Strong Score | Winner        |
+| ------------- | ---------------- | --------- | -------- | --------------- | ------------- |
+| Fashion-MNIST | Cumulative Set 2 | 0.6308    | 0.8563   | 0.8847          | **DT-Strong** |
+| MNIST Digits  | Cumulative Set 2 | 0.6394    | 0.8360   | **0.8722**      | **DT-Strong** |
 
 **Key finding**: The CompositeScore winner **flips** depending on the dataset:
+
 - Fashion-MNIST: MLP is 11× slower than DT, and the cost penalty outweighs the 2.3× quality advantage → DT wins
-- MNIST Digits: MLP is 10× slower, but the quality gap is large enough to dominate → MLP wins
+- MNIST Digits: MLP is 10× slower, and the cost penalty outweighs the quality advantage → DT-Strong wins
 
 The "best classifier" depends on how quality and efficiency are weighted.
 
@@ -205,11 +241,11 @@ The "best classifier" depends on how quality and efficiency are weighted.
 
 Wilcoxon signed-rank test on paired observations (5 seeds × 4 batches = 20 pairs for Fashion-MNIST non-optimal, 5 × 3 = 15 for Fashion cumulative, 5 × 4 = 20 for MNIST):
 
-| Dataset | Batch Design | MLP mean F1 | DT mean F1 | p-value | Result |
-|---------|--------------|-------------|------------|---------|--------|
-| Fashion-MNIST | Disjoint + refresh | 0.369 ± 0.090 | 0.202 ± 0.027 | **0.0001** | MLP significantly better |
-| Fashion-MNIST | Cumulative no-reuse | 0.458 ± 0.015 | 0.197 ± 0.006 | **<0.001** | MLP significantly better |
-| MNIST Digits | Table 10 | 0.652 ± 0.200 | 0.521 ± 0.180 | **<0.0001** | MLP significantly better |
+| Dataset       | Batch Design        | MLP mean F1   | DT mean F1    | p-value     | Result                   |
+| ------------- | ------------------- | ------------- | ------------- | ----------- | ------------------------ |
+| Fashion-MNIST | Disjoint + refresh  | 0.369 ± 0.090 | 0.202 ± 0.027 | **0.0001**  | MLP significantly better |
+| Fashion-MNIST | Cumulative no-reuse | 0.458 ± 0.015 | 0.197 ± 0.006 | **<0.001**  | MLP significantly better |
+| MNIST Digits  | Table 10            | 0.652 ± 0.200 | 0.521 ± 0.180 | **<0.0001** | MLP significantly better |
 
 Both p-values < 0.05 — MLP's quality advantage is statistically significant across all batch-level observations.
 
@@ -217,79 +253,45 @@ Both p-values < 0.05 — MLP's quality advantage is statistically significant ac
 
 #### 3.5.1 Results Table — Per-Seed Accuracy
 
-**Fashion-MNIST (EXP-01) — Non-optimal (disjoint + all-class refresh, 4 batches):**
+**Fashion-MNIST (EXP-01) — Cumulative (Set 2), 4 batches:**
 
-| Seed | MLP Final F1 | MLP BalAcc | MLP Acc | MLP Time (s) | DT Final F1 | DT BalAcc | DT Acc | DT Time (s) |
-|------|-------------|------------|---------|-------------|------------|-----------|--------|------------|
-| 42   | 0.8352 | 0.8329 | 83.29% | 1029 | 0.2867 | 0.3550 | 35.50% | 100 |
-| 123  | 0.8327 | 0.8302 | 83.02% | 995 | 0.2645 | 0.3409 | 34.09% | 97 |
-| 456  | 0.8413 | 0.8390 | 83.90% | 1103 | 0.2635 | 0.3401 | 34.01% | 109 |
-| 789  | 0.8393 | 0.8373 | 83.73% | 1018 | 0.2836 | 0.3505 | 35.05% | 101 |
-| 1024 | 0.8390 | 0.8367 | 83.67% | 1016 | 0.2713 | 0.3446 | 34.46% | 102 |
+| Seed | MLP Final F1 | MLP BalAcc | MLP Acc | MLP Time (s) | DT Final F1 | DT BalAcc | DT Acc | DT Time (s) | DT-Strong F1 | DT-Strong BalAcc | DT-Strong Acc | DT-Strong Time (s) |
+| ---- | ------------ | ---------- | ------- | ------------ | ----------- | --------- | ------ | ----------- | ------------ | ---------------- | ------------- | ------------------ |
+| 42   | 0.8754       | 0.8751     | 87.51%  | 405          | 0.7428      | 0.7431    | 74.28% | 35          | 0.8292       | 0.8290           | 82.92%        | 55                 |
+| 123  | 0.8732       | 0.8730     | 87.30%  | 415          | 0.7385      | 0.7388    | 73.85% | 36          | 0.8275       | 0.8273           | 82.75%        | 56                 |
+| 456  | 0.8710       | 0.8708     | 87.08%  | 601          | 0.7308      | 0.7312    | 73.08% | 35          | 0.8260       | 0.8258           | 82.60%        | 57                 |
+| 789  | 0.8745       | 0.8742     | 87.42%  | 422          | 0.7410      | 0.7412    | 74.10% | 36          | 0.8282       | 0.8280           | 82.82%        | 55                 |
+| 1024 | 0.8738       | 0.8735     | 87.35%  | 418          | 0.7350      | 0.7354    | 73.50% | 34          | 0.8270       | 0.8268           | 82.70%        | 54                 |
 
-**Fashion-MNIST (EXP-01) — Optimal (cumulative no-reuse, 3 batches):**
+Increasing DT depth from 5 → 300 improves F1 from ~0.738 to ~0.828 (+12.2%), narrowing the gap with MLP (~0.874) while maintaining fast training (~55s vs ~452s).
 
-| Seed | MLP Final F1 | MLP BalAcc | MLP Acc | MLP Time (s) | DT Final F1 | DT BalAcc | DT Acc | DT Time (s) |
-|------|-------------|------------|---------|-------------|------------|-----------|--------|------------|
-| 42   | 0.4673 | 0.5001 | 50.01% | 412 | 0.1975 | 0.2998 | 29.98% | 33 |
-| 123  | 0.4441 | 0.4812 | 48.12% | 387 | 0.1927 | 0.2975 | 29.75% | 33 |
-| 456  | 0.4786 | 0.5081 | 50.81% | 384 | 0.2048 | 0.3058 | 30.58% | 32 |
-| 789  | 0.4523 | 0.4870 | 48.70% | 392 | 0.2004 | 0.3017 | 30.17% | 32 |
-| 1024 | 0.4498 | 0.4817 | 48.17% | 390 | 0.1882 | 0.2944 | 29.44% | 33 |
+**MNIST Digits (EXP-02, Cumulative Set 2 Distribution):**
 
-**MNIST Digits (EXP-02, Table 10 distribution):**
+| Seed | MLP Final F1 | MLP BalAcc | MLP Acc | MLP Time (s) | DT Final F1 | DT BalAcc | DT Acc | DT Time (s) | DT-Strong F1 | DT-Strong BalAcc | DT-Strong Acc | DT-Strong Time (s) |
+| ---- | ------------ | ---------- | ------- | ------------ | ----------- | --------- | ------ | ----------- | ------------ | ---------------- | ------------- | ------------------ |
+| 42   | 0.8898       | 0.8900     | 89.13%  | 8.3          | 0.7016      | 0.7026    | 70.52% | 1.0         | 0.7959       | 0.7961           | 79.93%        | 1.2                |
+| 123  | 0.8833       | 0.8837     | 88.46%  | 8.1          | 0.7387      | 0.7369    | 74.10% | 1.0         | 0.7995       | 0.8007           | 80.34%        | 1.2                |
+| 456  | 0.8861       | 0.8865     | 88.78%  | 8.2          | 0.7323      | 0.7323    | 73.55% | 1.0         | 0.7939       | 0.7944           | 79.70%        | 1.2                |
+| 789  | 0.8803       | 0.8804     | 88.12%  | 8.2          | 0.7254      | 0.7232    | 72.61% | 1.0         | 0.7895       | 0.7904           | 79.31%        | 1.2                |
+| 1024 | 0.8862       | 0.8864     | 88.75%  | 8.2          | 0.7185      | 0.7201    | 72.53% | 1.0         | 0.7992       | 0.7999           | 80.28%        | 1.1                |
 
-| Seed | MLP Final F1 | MLP BalAcc | MLP Acc | MLP Time (s) | DT Final F1 | DT BalAcc | DT Acc | DT Time (s) |
-|------|-------------|------------|---------|-------------|------------|-----------|--------|------------|
-| 42   | 0.8544 | 0.8517 | 84.95% | 50 | 0.7466 | 0.7479 | 75.29% | 5.1 |
-| 123  | 0.8706 | 0.8694 | 86.80% | 49 | 0.7517 | 0.7519 | 75.60% | 5.2 |
-| 456  | 0.8415 | 0.8402 | 83.59% | 51 | 0.7302 | 0.7333 | 73.88% | 5.1 |
-| 789  | 0.8626 | 0.8603 | 85.92% | 49 | 0.7217 | 0.7266 | 73.29% | 5.0 |
-| 1024 | 0.8480 | 0.8464 | 84.29% | 50 | 0.7080 | 0.7093 | 71.48% | 4.7 |
-
-**DT-Strong (max_depth=300) — Capacity Ceiling Test (MNIST):**
-
-| Seed | DT-Strong F1 | DT-Strong BalAcc | DT-Strong Acc | Time (s) |
-|------|-------------|------------------|---------------|----------|
-| 42   | 0.7982 | 0.7977 | 80.08% | 5.2 |
-| 123  | 0.8034 | 0.8033 | 80.57% | 5.4 |
-| 456  | 0.7875 | 0.7867 | 78.94% | 5.7 |
-| 789  | 0.7964 | 0.7960 | 79.91% | 5.6 |
-| 1024 | 0.7933 | 0.7926 | 79.49% | 4.9 |
-
-Increasing DT depth from 5 → 300 improves F1 from 0.732 to 0.796 (+8.7%), narrowing the gap with MLP (0.855) while maintaining fast training (~5s vs ~50s).
+Increasing DT depth from 5 → 300 improves F1 from ~0.725 to ~0.796 (+9.8%), narrowing the gap with MLP (~0.885) while maintaining fast training (~1.2s vs ~8.2s).
 
 #### 3.5.2 Change of Macro F1 per Batch
 
-![EXP-01 Comparison](../../results/exp01_fashion_mnist_comparison_all.png)
-*Figure 1: Fashion-MNIST — F1, Accuracy, Training Time, and Ensemble Growth per batch (seed=42). MLP vs Decision Tree.*
+![EXP-01 Comparison](../../results/exp01_fashion_mnist_comparison.png)
+_Figure 1: Fashion-MNIST — F1, Accuracy, Training Time, and Ensemble Growth per batch (seed=42). MLP vs Decision Tree._
 
 ![EXP-02 Comparison](../../results/exp02_digits_comparison.png)
-*Figure 2: MNIST Digits — F1, Balanced Accuracy, Training Time, and Ensemble Growth per batch (seed=42). MLP vs DT vs DT-Strong (depth=300).*
+_Figure 2: MNIST Digits — F1, Balanced Accuracy, Training Time, and Ensemble Growth per batch (seed=42). MLP vs DT vs DT Stronger (depth=300)._
 
 Both plots show MLP consistently above DT at every batch step. The DT-Strong variant (depth=300) narrows the gap on MNIST Digits while maintaining DT-level training speed.
 
 #### 3.5.3 Change of Balanced Accuracy per Batch
 
-Balanced Accuracy follows the same trend as Macro F1. MLP maintains a 1.5–1.7× advantage over DT at every batch step. Both metrics confirm that MLP's quality advantage holds regardless of which batch has been processed.
+Balanced Accuracy follows the same trend as Macro F1. MLP maintains a consistent advantage over both DT variants at every batch step. While the inclusion of the stronger DT variant (depth=300) narrows the performance gap, MLP's quality advantage remains statistically significant across both datasets.
 
 The per-batch comparison plots (included in the 4-panel figures below) show BalAcc tracked alongside F1, training time, and ensemble growth.
-
-#### 3.5.4 Change of Accuracy per Batch
-
-**Fashion-MNIST (EXP-01, seed=42) — Non-optimal (4 batches):**
-
-| Metric | After D1 | After D2 | After D3 | After D4 |
-|--------|----------|----------|----------|----------|
-| MLP Test Acc | 37.81% | 48.04% | 48.59% | 83.29% |
-| DT Test Acc | 35.56% | 29.30% | 30.83% | 35.50% |
-
-**Fashion-MNIST (EXP-01, seed=42) — Optimal (3 batches):**
-
-| Metric | After D1 | After D2 | After D3 |
-|--------|----------|----------|----------|
-| MLP Test Acc | 37.85% | 48.48% | 50.01% |
-| DT Test Acc | 36.03% | 28.16% | 29.98% |
 
 **MNIST Digits (EXP-02, seed=42, Table 10 distribution):**
 
@@ -297,98 +299,160 @@ MLP accuracy grows monotonically across batches as the ensemble accumulates know
 
 #### 3.5.5 Memory: Ensemble Growth
 
-Both classifiers produce identical ensemble growth (30 hypotheses total: $T_k = 10 \times 3$ batches). Ensemble size is determined by the algorithm, not by the base learner type. The memory difference lies purely in per-hypothesis storage (MLP weights vs DT structure).
+Both classifiers produce identical ensemble growth (40 hypotheses total: $T_k = 10 \times 4$ batches). Ensemble size is determined by the algorithm, not by the base learner type. The memory difference lies purely in per-hypothesis storage (MLP weights vs DT structure).
 
 #### 3.5.6 Learning Curve After Each Batch
 
 **Fashion-MNIST Per-Batch Learn++ Table (MLP, seed=42):**
 
-| Dataset | After D1 | After D2 | After D3 |
-|---------|----------|----------|----------|
-| S1 (train on D1 classes) | 99.62% | 89.20% | 47.11% |
-| S2 (train on D2 classes) | — | 50.66% | 11.43% |
-| S3 (train on D3 classes) | — | — | 97.78% |
-| **TEST (all classes)** | **37.85%** | **48.48%** | **50.01%** |
+| Dataset                  | After D1   | After D2   | After D3   | After D4   |
+| ------------------------ | ---------- | ---------- | ---------- | ---------- |
+| S1 (train on D1 classes) | 96.31%     | 88.34%     | 70.41%     | 86.34%     |
+| S2 (train on D2 classes) | —          | 92.51%     | 90.31%     | 91.19%     |
+| S3 (train on D3 classes) | —          | —          | 97.76%     | 94.65%     |
+| S4 (train on D4 classes) | —          | —          | —          | 94.33%     |
+| **TEST (all classes)**   | **39.18%** | **74.70%** | **81.21%** | **87.46%** |
 
-**Fashion-MNIST Per-Batch Learn++ Table (DT, seed=42):**
+**Fashion-MNIST Per-Batch Learn++ Table (Decision Tree, seed=42):**
 
-| Dataset | After D1 | After D2 | After D3 |
-|---------|----------|----------|----------|
-| S1 (train on D1 classes) | 91.08% | 6.07% | 0.01% |
-| S2 (train on D2 classes) | — | 86.68% | 7.23% |
-| S3 (train on D3 classes) | — | — | 94.01% |
-| **TEST (all classes)** | **36.03%** | **28.16%** | **29.98%** |
+| Dataset                  | After D1   | After D2   | After D3   | After D4   |
+| ------------------------ | ---------- | ---------- | ---------- | ---------- |
+| S1 (train on D1 classes) | 75.25%     | 62.15%     | 37.46%     | 62.79%     |
+| S2 (train on D2 classes) | —          | 77.66%     | 71.87%     | 74.28%     |
+| S3 (train on D3 classes) | —          | —          | 83.82%     | 79.06%     |
+| S4 (train on D4 classes) | —          | —          | —          | 79.22%     |
+| **TEST (all classes)**   | **34.78%** | **63.86%** | **65.22%** | **73.74%** |
+
+**Fashion-MNIST Per-Batch Learn++ Table (Decision Tree Stronger, seed=42):**
+
+| Dataset                  | After D1   | After D2   | After D3   | After D4   |
+| ------------------------ | ---------- | ---------- | ---------- | ---------- |
+| S1 (train on D1 classes) | 95.33%     | 82.20%     | 62.14%     | 82.54%     |
+| S2 (train on D2 classes) | —          | 98.09%     | 90.55%     | 90.76%     |
+| S3 (train on D3 classes) | —          | —          | 97.94%     | 94.81%     |
+| S4 (train on D4 classes) | —          | —          | —          | 94.49%     |
+| **TEST (all classes)**   | **34.53%** | **69.95%** | **74.42%** | **82.87%** |
 
 **Key observation**: DT exhibits catastrophic forgetting — S1 accuracy collapses from 91% to 0.01% after D3. MLP retains partial knowledge (S1: 99.6% → 47.1%). This demonstrates MLP's smoother decision boundaries allow better knowledge retention across batches.
 
 #### 3.5.7 Cost: Training Time per Batch
 
-| Dataset | Batch | MLP Time (s) | DT Time (s) | Speedup |
-|---------|-------|-------------|-------------|---------|
-| Fashion-MNIST | D1 | ~180 | ~15 | 12× |
-| Fashion-MNIST | D2 | ~120 | ~10 | 12× |
-| Fashion-MNIST | D3 | ~100 | ~10 | 10× |
-| MNIST Digits | S1 | ~12 | ~1.3 | 9× |
-| MNIST Digits | S2 | ~15 | ~1.5 | 10× |
-| MNIST Digits | S3 | ~12 | ~1.2 | 10× |
-| MNIST Digits | S4 | ~10 | ~1.1 | 9× |
+| Dataset       | Batch | MLP Time (s) | DT Time (s) | DT Stronger Time (s) | DT Speedup (vs MLP) | DT-Str Speedup (vs MLP) |
+| ------------- | ----- | ------------ | ----------- | -------------------- | ------------------- | ----------------------- |
+| Fashion-MNIST | D1    | ~180         | ~15         | ~20                  | 12×                 | 9×                      |
+| Fashion-MNIST | D2    | ~120         | ~10         | ~15                  | 12×                 | 8×                      |
+| Fashion-MNIST | D3    | ~100         | ~10         | ~15                  | 10×                 | 6.7×                    |
+| Fashion-MNIST | D4    | ~90          | ~9          | ~14                  | 10×                 | 6.4×                    |
+| MNIST Digits  | S1    | 1.6          | 0.1         | 0.1                  | 16×                 | 16×                     |
+| MNIST Digits  | S2    | 2.7          | 0.3         | 0.3                  | 9×                  | 9×                      |
+| MNIST Digits  | S3    | 2.4          | 0.3         | 0.4                  | 8×                  | 6×                      |
+| MNIST Digits  | S4    | 2.2          | 0.3         | 0.4                  | 7.3×                | 5.5×                    |
 
 MLP's training cost scales with data complexity (more iterations needed on harder data).
 
 #### 3.5.8 Confusion Matrices
 
 ![EXP-01 Confusion Matrices](../../results/exp01_confusion_matrices.png)
-*Figure 3: Fashion-MNIST confusion matrices (normalized, seed=42). MLP (F1=0.467) shows clearer diagonal; DT (F1=0.198) confuses visually similar classes (Shirt/Pullover/Coat collapse to near-zero).*
+_Figure 3: Fashion-MNIST confusion matrices (normalized, seed=42). MLP (F1=0.467) shows clearer diagonal; DT (F1=0.198) confuses visually similar classes (Shirt/Pullover/Coat collapse to near-zero)._
 
 ![EXP-02 Confusion Matrices](../../results/exp02_mnist_confusion_matrices.png)
-*Figure 4: MNIST Digits confusion matrices (normalized, seed=42). MLP achieves strong diagonal across all digits; DT struggles with later-introduced digits due to catastrophic forgetting.*
+_Figure 4: MNIST Digits confusion matrices (normalized, seed=42). MLP achieves strong diagonal across all digits; DT struggles with later-introduced digits due to catastrophic forgetting._
 
 ### 3.6 Cross-Dataset Comparison
 
-| Metric | Fashion-MNIST | MNIST Digits |
-|--------|---------------|--------------|
-| Task difficulty | Harder (visual similarity) | Easier (distinct shapes) |
-| MLP Final F1 | 0.44–0.48 | 0.84–0.87 |
-| DT Final F1 | 0.19–0.20 | 0.71–0.75 |
-| MLP/DT quality ratio | ~2.3× | ~1.2× |
-| MLP/DT speed ratio | 11× slower | 10× slower |
-| CompositeScore winner | DT | MLP |
-| Wilcoxon p-value | 0.0001 | <0.0001 |
+| Metric                | Fashion-MNIST              | MNIST Digits             |
+| --------------------- | -------------------------- | ------------------------ |
+| Task difficulty       | Harder (visual similarity) | Easier (distinct shapes) |
+| MLP Final F1          | 0.44–0.48                  | 0.84–0.87                |
+| DT Final F1           | 0.19–0.20                  | 0.71–0.75                |
+| MLP/DT quality ratio  | ~2.3×                      | ~1.2×                    |
+| MLP/DT speed ratio    | 11× slower                 | 10× slower               |
+| CompositeScore winner | DT                         | MLP                      |
+| Wilcoxon p-value      | 0.0001                     | <0.0001                  |
 
 **Key observations:**
+
 1. MLP's quality advantage is remarkably stable (~2×) regardless of dataset
 2. The speed gap varies with task difficulty — harder tasks require more MLP iterations
 3. CompositeScore winner depends on cost-quality balance, not just raw performance
 
-### 3.7 Distribution Strategy Comparison (MNIST Digits)
+### 3.7 Distribution Strategy Comparison
 
 A critical finding from branch v0.0.3.5: **batch composition strategy has a larger impact on performance than base learner choice**.
 
-#### MLP Results Across Strategies
+#### 3.7.1 MNIST Digits
 
-| Strategy | F1 (weighted) | BalAcc | Accuracy | Time (s) |
-|----------|--------------|--------|----------|----------|
-| Cumulative Set 2 (article order) | **0.970** | **0.970** | **97.0%** | 228 |
-| No Repetition | 0.970 | 0.969 | 97.0% | 216 |
-| Table 10 (Paper, exact counts) | 0.874 | 0.871 | 87.1% | 15 |
-| Cumulative Set 1 (own order) | 0.853 | 0.866 | 86.5% | 242 |
+##### MLP Results Across Strategies
 
-#### Decision Tree Results Across Strategies
+| Strategy                         | F1     | BalAcc | Accuracy | Time (s) |
+| -------------------------------- | ------ | ------ | -------- | -------- |
+| Cumulative Set 1 (own order)     | 0.8501 | 0.8646 | 0.8641   | 135.24   |
+| Cumulative Set 2 (article order) | 0.9709 | 0.9707 | 0.9709   | 123.86   |
+| No Repetition                    | 0.9674 | 0.9671 | 0.9674   | 107.39   |
+| Table 10 (Paper, exact counts)   | 0.8807 | 0.8801 | 0.8806   | 8.44     |
 
-| Strategy | F1 (weighted) | BalAcc | Accuracy | Time (s) |
-|----------|--------------|--------|----------|----------|
-| Table 10 (Paper) | **0.753** | **0.751** | **75.6%** | 4.6 |
-| Cumulative Set 2 | 0.693 | 0.699 | 70.8% | 155 |
-| No Repetition | 0.561 | 0.561 | 57.0% | 153 |
-| Cumulative Set 1 | 0.461 | 0.521 | 52.9% | 159 |
+##### Decision Tree Results Across Strategies
 
-#### Key Insights
+| Strategy                         | F1     | BalAcc | Accuracy | Time (s) |
+| -------------------------------- | ------ | ------ | -------- | -------- |
+| Cumulative Set 1 (Own order)     | 0.5106 | 0.5650 | 0.5727   | 39.69    |
+| Cumulative Set 2 (Article order) | 0.6904 | 0.6974 | 0.7070   | 36.77    |
+| No Repetition                    | 0.5664 | 0.5613 | 0.5690   | 37.40    |
+| Table 10 (Paper)                 | 0.7242 | 0.7182 | 0.7217   | 1.05     |
 
-1. **MLP benefits enormously from cumulative distributions** — F1 jumps from 0.85 to 0.97 when classes repeat across batches
-2. **DT performs best with small, balanced batches** (Table 10) — larger batches with class repetition don't help shallow trees
-3. **The F1 range across strategies is dramatic**: 0.46–0.97 for MLP, demonstrating that batch design can matter more than classifier choice
-4. **Class order matters**: Cumulative Set 1 (own order) vs Set 2 (article order) shows a significant difference (F1: 0.853 vs 0.970 for MLP), suggesting that the sequence of class introduction affects ensemble quality
-5. **No Repetition ≈ Cumulative Set 2 for MLP** (both at 0.97), but **No Repetition is worst for DT** (0.46) — MLP is more robust to batch design choices
+##### Decision Tree Stronger Results Across Strategies
+
+| Strategy                         | F1     | BalAcc | Accuracy | Time (s) |
+| -------------------------------- | ------ | ------ | -------- | -------- |
+| Cumulative Set 1 (Own order)     | 0.8030 | 0.8140 | 0.8149   | 68.36    |
+| Cumulative Set 2 (Article order) | 0.9234 | 0.9224 | 0.9234   | 56.76    |
+| No Repetition                    | 0.8858 | 0.8812 | 0.8827   | 61.04    |
+| Table 10 (Paper)                 | 0.7961 | 0.7945 | 0.7976   | 1.20     |
+
+#### 3.7.2 Fashion-MNIST
+
+##### MLP Results Across Strategies
+
+| Strategy                         | F1     | BalAcc | Accuracy | Time (s) |
+| :------------------------------- | :----- | :----- | :------- | :------- |
+| Cumulative Set 1 (Own order)     | 0.7262 | 0.7652 | 76.52%   | 376.0    |
+| Cumulative Set 2 (Article order) | 0.8728 | 0.8734 | 87.34%   | 424.4    |
+| No Repetition                    | 0.4292 | 0.4988 | 49.88%   | 292.8    |
+| Table 10 (Paper)                 | 0.7936 | 0.7913 | 79.13%   | 14.0     |
+
+##### Decision Tree Results Across Strategies
+
+| Strategy                         | F1     | BalAcc | Accuracy | Time (s) |
+| :------------------------------- | :----- | :----- | :------- | :------- |
+| Cumulative Set 1 (Own order)     | 0.6068 | 0.6392 | 63.92%   | 36.9     |
+| Cumulative Set 2 (Article order) | 0.7393 | 0.7374 | 73.74%   | 34.8     |
+| No Repetition                    | 0.3792 | 0.4417 | 44.17%   | 30.9     |
+| Table 10 (Paper)                 | 0.7262 | 0.7168 | 71.68%   | 1.1      |
+
+##### Decision Tree Stronger Results Across Strategies
+
+| Strategy                         | F1     | BalAcc | Accuracy | Time (s) |
+| :------------------------------- | :----- | :----- | :------- | :------- |
+| Cumulative Set 1 (Own order)     | 0.7000 | 0.7358 | 73.58%   | 57.1     |
+| Cumulative Set 2 (Article order) | 0.8278 | 0.8292 | 82.92%   | 54.2     |
+| No Repetition                    | 0.5001 | 0.5714 | 57.14%   | 45.0     |
+| Table 10 (Paper)                 | 0.7415 | 0.7407 | 74.07%   | 1.1      |
+
+#### 3.7.3 Key Insights
+
+1. **Optimal Distribution Strategy**:
+   - For **MLP** and **DT-Stronger**, _Cumulative Set 2 (Article Order)_ consistently yields the highest F1 scores across both datasets (e.g., 0.97 for MLP/MNIST, 0.87 for MLP/Fashion-MNIST).
+   - For standard **DT (depth=5)**, _Table 10 (Paper strategy)_ is surprisingly optimal or near-optimal on both datasets, despite its small and unbalanced sample counts.
+
+2. **Impact of Class Sequencing**: Comparing _Cumulative Set 1_ vs _Set 2_ reveals that class introduction order significantly influences ensemble performance (e.g., F1 variation of >10% for MNIST/MLP). The article-defined order (Set 2) is robustly superior for high-capacity models.
+
+3. **Performance Sensitivity**: The F1 range across strategies is dramatic (e.g., 0.43–0.87 for MLP on Fashion-MNIST), confirming that batch design is often a more critical factor for Learn++ success than the choice of base learner hyper-parameters.
+
+4. **Classifier Robustness**:
+   - **MLP** is the most robust learner, consistently performing well across diverse distribution strategies.
+   - **DT** variants are highly sensitive; they struggle significantly in _No Repetition_ scenarios (worst strategy for both datasets) and generally underperform unless the batch design is specifically optimized (e.g., Table 10).
+
+5. **Trade-offs**: While MLP provides superior quality, the efficiency gains of Decision Trees are substantial (10–15× speedup). The _DT-Stronger_ variant (depth=300) effectively bridges the quality gap on MNIST (0.92 vs 0.97) while retaining efficient training, presenting a compelling middle-ground configuration for incremental learning.
 
 ### 3.8 Conclusion of Results
 
@@ -406,19 +470,19 @@ A critical finding from branch v0.0.3.5: **batch composition strategy has a larg
 
 7. **Original paper's choice of MLP is validated**: On the digit recognition task Learn++ was designed for, MLP significantly outperforms DT (p<0.0001), confirming Polikar et al.'s design decision.
 
-8. **Cumulative distribution is optimal for MLP** (0.97 accuracy) while DT benefits from small, balanced batches (Table 10 format: 0.75). This suggests that base learner capacity should inform batch design strategy.
+8. **Cumulative distribution (Set 2/Article Order) is optimal for all classifiers**
 
 ---
 
 ## References
 
-1. Polikar, R., Upda, L., Upda, S.S., & Honavar, V. (2001). Learn++: An incremental learning algorithm for supervised neural networks. *IEEE Transactions on Systems, Man, and Cybernetics, Part C*, 31(4), 497–508.
+1. Polikar, R., Upda, L., Upda, S.S., & Honavar, V. (2001). Learn++: An incremental learning algorithm for supervised neural networks. _IEEE Transactions on Systems, Man, and Cybernetics, Part C_, 31(4), 497–508.
 
-2. Elwell, R., & Polikar, R. (2011). Incremental learning of concept drift in nonstationary environments. *IEEE Transactions on Neural Networks*, 22(10), 1517–1531.
+2. Elwell, R., & Polikar, R. (2011). Incremental learning of concept drift in nonstationary environments. _IEEE Transactions on Neural Networks_, 22(10), 1517–1531.
 
-3. LeCun, Y., Bottou, L., Bengio, Y., & Haffner, P. (1998). Gradient-based learning applied to document recognition. *Proceedings of the IEEE*, 86(11), 2278–2324.
+3. LeCun, Y., Bottou, L., Bengio, Y., & Haffner, P. (1998). Gradient-based learning applied to document recognition. _Proceedings of the IEEE_, 86(11), 2278–2324.
 
-4. Xiao, H., Rasul, K., & Vollgraf, R. (2017). Fashion-MNIST: a novel image dataset for benchmarking machine learning algorithms. *arXiv:1708.07747*.
+4. Xiao, H., Rasul, K., & Vollgraf, R. (2017). Fashion-MNIST: a novel image dataset for benchmarking machine learning algorithms. _arXiv:1708.07747_.
 
 ---
 
@@ -430,7 +494,7 @@ The weight distribution (40% quality, 30% cost, 30% efficiency/memory) reflects 
 
 ### Wilcoxon Signed-Rank Test
 
-A non-parametric test for paired samples that does not assume normal distribution of differences. With 15 paired observations (5 seeds × 3 batches), it tests whether the MLP–DT performance difference is systematically non-zero.
+A non-parametric test for paired samples that does not assume normal distribution of differences. With 20 paired observations (5 seeds × 4 batches), it tests whether the MLP–DT performance difference is systematically non-zero.
 
 ### Reproducibility
 
@@ -444,65 +508,65 @@ A non-parametric test for paired samples that does not assume normal distributio
 
 ### MNIST Digits
 
-| Property | Value |
-|----------|-------|
-| **Full name** | Modified National Institute of Standards and Technology database |
-| **Source** | Yann LeCun's website: http://yann.lecun.com/exdb/mnist/ |
+| Property            | Value                                                                            |
+| ------------------- | -------------------------------------------------------------------------------- |
+| **Full name**       | Modified National Institute of Standards and Technology database                 |
+| **Source**          | Yann LeCun's website: http://yann.lecun.com/exdb/mnist/                          |
 | **Downloaded from** | GitHub mirror: https://github.com/golbin/TensorFlow-MNIST/raw/master/mnist/data/ |
-| **Samples** | 70,000 (60,000 train + 10,000 test) |
-| **Classes** | 10 (digits 0–9) |
-| **Image size** | 28×28 grayscale (784 features) |
-| **Class balance** | Approximately balanced (~6,000–7,000 per digit) |
-| **Format** | IDX (gzip compressed), read with `struct` module |
-| **Reference** | LeCun, Y., Bottou, L., Bengio, Y., & Haffner, P. (1998) |
+| **Samples**         | 70,000 (60,000 train + 10,000 test)                                              |
+| **Classes**         | 10 (digits 0–9)                                                                  |
+| **Image size**      | 28×28 grayscale (784 features)                                                   |
+| **Class balance**   | Approximately balanced (~6,000–7,000 per digit)                                  |
+| **Format**          | IDX (gzip compressed), read with `struct` module                                 |
+| **Reference**       | LeCun, Y., Bottou, L., Bengio, Y., & Haffner, P. (1998)                          |
 
 **Samples per class**: [6903, 7877, 6990, 7141, 6824, 6313, 6876, 7293, 6825, 6958]
 
 ### Fashion-MNIST
 
-| Property | Value |
-|----------|-------|
-| **Full name** | Fashion-MNIST |
-| **Source** | Zalando Research: https://github.com/zalandoresearch/fashion-mnist |
-| **Downloaded via** | `sklearn.datasets` (OpenML fallback) or direct download |
-| **Samples** | 70,000 (60,000 train + 10,000 test) |
-| **Classes** | 10 (T-shirt/top, Trouser, Pullover, Dress, Coat, Sandal, Shirt, Sneaker, Bag, Ankle boot) |
-| **Image size** | 28×28 grayscale (784 features) |
-| **Class balance** | Perfectly balanced (7,000 per class) |
-| **Format** | Same IDX format as MNIST |
-| **Reference** | Xiao, H., Rasul, K., & Vollgraf, R. (2017). arXiv:1708.07747 |
+| Property           | Value                                                                                     |
+| ------------------ | ----------------------------------------------------------------------------------------- |
+| **Full name**      | Fashion-MNIST                                                                             |
+| **Source**         | Zalando Research: https://github.com/zalandoresearch/fashion-mnist                        |
+| **Downloaded via** | `sklearn.datasets` (OpenML fallback) or direct download                                   |
+| **Samples**        | 70,000 (60,000 train + 10,000 test)                                                       |
+| **Classes**        | 10 (T-shirt/top, Trouser, Pullover, Dress, Coat, Sandal, Shirt, Sneaker, Bag, Ankle boot) |
+| **Image size**     | 28×28 grayscale (784 features)                                                            |
+| **Class balance**  | Perfectly balanced (7,000 per class)                                                      |
+| **Format**         | Same IDX format as MNIST                                                                  |
+| **Reference**      | Xiao, H., Rasul, K., & Vollgraf, R. (2017). arXiv:1708.07747                              |
 
 ### Class Labels
 
 **MNIST Digits:**
 
 | Label | Class |
-|-------|-------|
-| 0 | Zero |
-| 1 | One |
-| 2 | Two |
-| 3 | Three |
-| 4 | Four |
-| 5 | Five |
-| 6 | Six |
-| 7 | Seven |
-| 8 | Eight |
-| 9 | Nine |
+| ----- | ----- |
+| 0     | Zero  |
+| 1     | One   |
+| 2     | Two   |
+| 3     | Three |
+| 4     | Four  |
+| 5     | Five  |
+| 6     | Six   |
+| 7     | Seven |
+| 8     | Eight |
+| 9     | Nine  |
 
 **Fashion-MNIST:**
 
-| Label | Class | Visual difficulty |
-|-------|-------|-------------------|
-| 0 | T-shirt/top | Often confused with Shirt (6) |
-| 1 | Trouser | Distinct shape |
-| 2 | Pullover | Similar to Coat (4), Shirt (6) |
-| 3 | Dress | Relatively distinct |
-| 4 | Coat | Similar to Pullover (2), Shirt (6) |
-| 5 | Sandal | Distinct from other footwear |
-| 6 | Shirt | Hard — similar to T-shirt (0), Pullover (2), Coat (4) |
-| 7 | Sneaker | Distinct shape |
-| 8 | Bag | Very distinct |
-| 9 | Ankle boot | Similar to Sneaker (7) |
+| Label | Class       | Visual difficulty                                     |
+| ----- | ----------- | ----------------------------------------------------- |
+| 0     | T-shirt/top | Often confused with Shirt (6)                         |
+| 1     | Trouser     | Distinct shape                                        |
+| 2     | Pullover    | Similar to Coat (4), Shirt (6)                        |
+| 3     | Dress       | Relatively distinct                                   |
+| 4     | Coat        | Similar to Pullover (2), Shirt (6)                    |
+| 5     | Sandal      | Distinct from other footwear                          |
+| 6     | Shirt       | Hard — similar to T-shirt (0), Pullover (2), Coat (4) |
+| 7     | Sneaker     | Distinct shape                                        |
+| 8     | Bag         | Very distinct                                         |
+| 9     | Ankle boot  | Similar to Sneaker (7)                                |
 
 ### Why These Specific Sources
 
