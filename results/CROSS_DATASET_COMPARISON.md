@@ -55,16 +55,16 @@ Formula: `0.40·MacroF1 + 0.15·BalancedAcc + 0.15·(1-TrainTimeNorm) + 0.15·(1
 
 ---
 
-### Statistical Significance (Wilcoxon Signed-Rank)
+### Quality Advantage: Effect Size & Consistency
 
-- **Paired observations**: 20 (5 seeds × 4 batches)
+We do **not** report a pooled Wilcoxon p-value here. The natural pooling ($5\text{ seeds} \times 4\text{ batches} = 20$ "pairs") violates the test's independence assumption: the batches are cumulative (repeated measures on a growing ensemble), every seed reuses the same batch partition, and a single fixed test set is reused for every evaluation. Instead we compare on the independent unit (final-batch F1 per seed) and report direction consistency.
 
-| Comparison                          | Fashion-MNIST p-value  | MNIST Digits p-value   | Winner (Quality) |
-| ----------------------------------- | ---------------------- | ---------------------- | ---------------- |
-| **MLP vs. DT (depth=5)**            | $1.907 \times 10^{-6}$ | $1.907 \times 10^{-6}$ | **MLP**          |
-| **MLP vs. DT Stronger (depth=300)** | $1.907 \times 10^{-6}$ | $1.907 \times 10^{-6}$ | **MLP**          |
+| Comparison                          | Fashion-MNIST      | MNIST Digits       | Winner (Quality) |
+| ----------------------------------- | ------------------ | ------------------ | ---------------- |
+| **MLP vs. DT (depth=5)**            | MLP wins 5/5 seeds | MLP wins 5/5 seeds | **MLP**          |
+| **MLP vs. DT Stronger (depth=300)** | MLP wins 5/5 seeds | MLP wins 5/5 seeds | **MLP**          |
 
-**Observation**: Despite the narrower margins, MLP's quality advantage remains highly statistically significant ($p < 0.05$) on both datasets across all seeds and batches.
+**Observation**: MLP's quality advantage is large and perfectly consistent — it wins on every seed and at every batch step on both datasets. With only 5 independent replicates per dataset a formal paired test is underpowered (min attainable two-sided $p \approx 0.0625$), so we rely on effect size and consistency rather than a significance claim.
 
 ---
 

@@ -66,27 +66,28 @@
 | **Final BalAcc**              | 87.10% – 87.54% | 73.08% – 74.28%         | 82.60% – 82.92%                    | **MLP**           |
 | **Total Training Time**       | ~405s – 601s    | **~35s**                | ~55s                               | **DT (depth=5)**  |
 | **CompositeScore** (Seed 42)  | 0.6308          | **0.8563**              | 0.8531                             | **DT (depth=5)**  |
-| **Wilcoxon p-value (vs MLP)** | —               | $1.907 \times 10^{-6}$  | $1.907 \times 10^{-6}$             | **MLP (Quality)** |
+| **Per-seed consistency (vs MLP)** | —           | MLP wins 5/5 seeds      | MLP wins 5/5 seeds                 | **MLP (Quality)** |
 
 ### Interpretation & Deep Dive
 
 - **Classification Quality**: The MLP (the original paper's classifier) remains the superior model in terms of accuracy and F1 score, outperforming the basic Decision Tree by ~13.1 percentage points and the Stronger Decision Tree by ~4.7 percentage points.
 - **Tree Depth Impact**: Restricting tree depth to 5 (the recommended setting for medical/tabular data) is insufficient for image features even after PCA. However, increasing `max_depth` to 300 dramatically bridges the quality gap, improving the F1 score from ~74.2% to ~82.6%, while only increasing the training time slightly (from ~35s to ~55s).
 - **The Quality-Cost Trade-Off**: Although MLP delivers the best classification performance, it is computationally expensive (taking up to 11–17× longer to train than the decision trees). Consequently, under the balanced **CompositeScore** formula (which weights F1 at 40%, Balanced Accuracy at 15%, and penalizes training time, inference time, and memory footprint at 15% each), the **Decision Tree** wins (0.8563 vs 0.6308 for MLP).
-- **Statistical Significance**: The Wilcoxon signed-rank test across all 20 paired observations (5 seeds × 4 batches) yields $p \approx 1.907 \times 10^{-6}$ for both DT variants compared to MLP, demonstrating that MLP's quality advantage is highly statistically significant.
+- **On statistical testing**: We deliberately do **not** report a pooled Wilcoxon p-value over the $5\text{ seeds} \times 4\text{ batches} = 20$ scores. That pooling violates the test's independence assumption (cumulative batches are repeated measures on a growing ensemble; all seeds reuse the same batch partition; a single fixed test set is reused), which inflates the effective sample size and yields an artificially tiny p-value. Instead we report the **effect size** (MLP leads by ~13 F1 points over DT and ~5 over DT-Strong) and **direction consistency** — MLP wins in **5/5** seeds and at every batch step. With only 5 independent replicates a formal paired test is underpowered (min attainable two-sided $p \approx 0.0625$), so a significance claim is not warranted.
 
-### Statistical Significance (Wilcoxon Signed-Rank)
+### Quality Advantage: Effect Size & Consistency
 
-- **Paired observations**: 20 (5 seeds × 4 batches)
-- **MLP vs. DT (depth=5)**: $p \approx 1.907 \times 10^{-6}$ (Significant, MLP performs better)
-- **MLP vs. DT Stronger (depth=300)**: $p \approx 1.907 \times 10^{-6}$ (Significant, MLP performs better)
+Comparison on the independent unit (final-batch F1 per seed, 5 replicates) rather than a pooled significance test (see note above on why pooling violates independence):
+
+- **MLP vs. DT (depth=5)**: MLP wins 5/5 seeds, ~+13 F1 points
+- **MLP vs. DT Stronger (depth=300)**: MLP wins 5/5 seeds, ~+5 F1 points
 
 ### Key questions answered:
 
-- ✅ **Does MLP hold up as a superior learner for image data?** → Yes, strongly (F1 of ~87.3% vs DT's ~74.2%, $p \approx 1.91 \times 10^{-6}$).
+- ✅ **Does MLP hold up as a superior learner for image data?** → Yes, strongly (F1 of ~87.3% vs DT's ~74.2%), winning on every seed and batch.
 - ✅ **Is DT a viable alternative?** → Purely in terms of accuracy/F1 on image features, even a stronger DT lags behind MLP. However, for applications where resource constraints or deployment costs are critical, DT is extremely competitive.
 - ✅ **Quality-cost trade-off?** → If computation is penalized, the basic Decision Tree wins the CompositeScore (0.8563 vs MLP's 0.6308) due to being 12× faster to train.
-- ✅ **Statistically significant?** → Yes, the quality difference is highly statistically significant ($p \approx 1.91 \times 10^{-6}$).
+- ✅ **Is the quality gap reliable?** → Yes by effect size and consistency (MLP wins 5/5 seeds). We avoid a formal significance test because the nested/cumulative design and shared data partition violate its independence assumption.
 
 ### Remaining work:
 

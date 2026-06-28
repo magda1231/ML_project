@@ -237,17 +237,19 @@ Where $\hat{T}_{train}$, $\hat{T}_{inf}$, $\hat{M}$ are min-max normalized train
 
 The "best classifier" depends on how quality and efficiency are weighted.
 
-### 3.4 Statistical Significance
+### 3.4 Quality Advantage: Effect Size & Consistency
 
-Wilcoxon signed-rank test on paired observations (5 seeds × 4 batches = 20 pairs for Fashion-MNIST non-optimal, 5 × 3 = 15 for Fashion cumulative, 5 × 4 = 20 for MNIST):
+A naïve significance test would pool the per-batch scores (e.g. 5 seeds × 4 batches = 20 "pairs") and run a Wilcoxon signed-rank test. We deliberately avoid this: the pooling violates the test's independence assumption, because (i) the batches are *cumulative*, so per-batch scores within a run are repeated measures on a growing ensemble; (ii) every seed reuses the **same** batch partition, so seeds vary only model randomness rather than the data; and (iii) a single fixed test set is reused for every evaluation. Treating those correlated points as independent inflates the effective sample size and yields an artificially tiny p-value.
 
-| Dataset       | Batch Design        | MLP mean F1   | DT mean F1    | p-value     | Result                   |
-| ------------- | ------------------- | ------------- | ------------- | ----------- | ------------------------ |
-| Fashion-MNIST | Disjoint + refresh  | 0.369 ± 0.090 | 0.202 ± 0.027 | **0.0001**  | MLP significantly better |
-| Fashion-MNIST | Cumulative no-reuse | 0.458 ± 0.015 | 0.197 ± 0.006 | **<0.001**  | MLP significantly better |
-| MNIST Digits  | Table 10            | 0.652 ± 0.200 | 0.521 ± 0.180 | **<0.0001** | MLP significantly better |
+Instead we compare on the independent unit (final-batch F1 per seed, 5 replicates) and report effect size and direction consistency:
 
-Both p-values < 0.05 — MLP's quality advantage is statistically significant across all batch-level observations.
+| Dataset       | Batch Design        | MLP mean F1   | DT mean F1    | MLP − DT | Consistency        |
+| ------------- | ------------------- | ------------- | ------------- | -------- | ------------------ |
+| Fashion-MNIST | Disjoint + refresh  | 0.369 ± 0.090 | 0.202 ± 0.027 | +0.167   | MLP wins 5/5 seeds |
+| Fashion-MNIST | Cumulative no-reuse | 0.458 ± 0.015 | 0.197 ± 0.006 | +0.261   | MLP wins 5/5 seeds |
+| MNIST Digits  | Table 10            | 0.652 ± 0.200 | 0.521 ± 0.180 | +0.131   | MLP wins 5/5 seeds |
+
+MLP leads on every dataset and batch design, and the direction is consistent across all seeds. With only 5 independent replicates a formal paired test is underpowered (minimum attainable two-sided p ≈ 0.0625), so we rely on the large, consistent effect size rather than a significance claim.
 
 ### 3.5 Visualizations
 
@@ -289,7 +291,7 @@ Both plots show MLP consistently above DT at every batch step. The DT-Strong var
 
 #### 3.5.3 Change of Balanced Accuracy per Batch
 
-Balanced Accuracy follows the same trend as Macro F1. MLP maintains a consistent advantage over both DT variants at every batch step. While the inclusion of the stronger DT variant (depth=300) narrows the performance gap, MLP's quality advantage remains statistically significant across both datasets.
+Balanced Accuracy follows the same trend as Macro F1. MLP maintains a consistent advantage over both DT variants at every batch step. While the inclusion of the stronger DT variant (depth=300) narrows the performance gap, MLP's quality advantage remains large and consistent across both datasets (MLP wins on every seed).
 
 The per-batch comparison plots (included in the 4-panel figures below) show BalAcc tracked alongside F1, training time, and ensemble growth.
 
@@ -368,7 +370,7 @@ _Figure 4: MNIST Digits confusion matrices (normalized, seed=42). MLP achieves s
 | MLP/DT quality ratio  | ~2.3×                      | ~1.2×                    |
 | MLP/DT speed ratio    | 11× slower                 | 10× slower               |
 | CompositeScore winner | DT                         | MLP                      |
-| Wilcoxon p-value      | 0.0001                     | <0.0001                  |
+| MLP vs DT consistency | MLP wins 5/5 seeds         | MLP wins 5/5 seeds       |
 
 **Key observations:**
 
@@ -456,7 +458,7 @@ A critical finding from branch v0.0.3.5: **batch composition strategy has a larg
 
 ### 3.8 Conclusion of Results
 
-1. **MLP consistently outperforms Decision Tree** by ~1.2–2.3× on Macro F1 across both datasets, with statistical significance (Wilcoxon p < 0.001).
+1. **MLP consistently outperforms Decision Tree** by ~1.2–2.3× on Macro F1 across both datasets, winning on every seed and batch (large, consistent effect size; we avoid a pooled significance test because the cumulative/nested design violates independence).
 
 2. **Higher capacity vs higher cost trade-off**: Fashion-MNIST's inter-class visual similarity benefits from MLP's nonlinear decision boundaries despite the 11× training cost.
 
@@ -492,9 +494,9 @@ A critical finding from branch v0.0.3.5: **batch composition strategy has a larg
 
 The weight distribution (40% quality, 30% cost, 30% efficiency/memory) reflects the assumption that classification quality is the primary objective, with cost as a secondary constraint. Different weight schemes would shift the crossover point between MLP and DT dominance.
 
-### Wilcoxon Signed-Rank Test
+### On the Wilcoxon Signed-Rank Test (and why we do not pool it here)
 
-A non-parametric test for paired samples that does not assume normal distribution of differences. With 20 paired observations (5 seeds × 4 batches), it tests whether the MLP–DT performance difference is systematically non-zero.
+The Wilcoxon signed-rank test is a non-parametric paired test that does not assume a normal distribution of differences, but it does assume the paired observations are **independent**. Pooling our per-batch scores (5 seeds × 4 batches = 20 "pairs") breaks that assumption: the batches are cumulative (repeated measures on a growing ensemble), every seed reuses the same batch partition, and a single fixed test set is reused for every evaluation. We therefore compare on the independent unit (final-batch F1 per seed, 5 replicates) and report effect size and direction consistency instead of a pooled p-value. With only 5 independent replicates a formal paired test is also underpowered (minimum attainable two-sided p ≈ 0.0625).
 
 ### Reproducibility
 
