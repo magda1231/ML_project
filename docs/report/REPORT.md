@@ -239,17 +239,16 @@ The "best classifier" depends on how quality and efficiency are weighted.
 
 ### 3.4 Quality Advantage: Effect Size & Consistency
 
-A naïve significance test would pool the per-batch scores (e.g. 5 seeds × 4 batches = 20 "pairs") and run a Wilcoxon signed-rank test. We deliberately avoid this: the pooling violates the test's independence assumption, because (i) the batches are *cumulative*, so per-batch scores within a run are repeated measures on a growing ensemble; (ii) every seed reuses the **same** batch partition, so seeds vary only model randomness rather than the data; and (iii) a single fixed test set is reused for every evaluation. Treating those correlated points as independent inflates the effective sample size and yields an artificially tiny p-value.
+A naïve significance test would pool the per-batch scores (e.g. 5 seeds × 4 batches = 20 "pairs") and run a Wilcoxon signed-rank test. We deliberately avoid this: the pooling violates the test's independence assumption, because (i) the batches are *cumulative*, so per-batch scores within a run are repeated measures on a growing ensemble; (ii) every seed reuses the **same** batch partition, so seeds vary only model randomness rather than the data; and (iii) a single fixed test set is reused for every evaluation. Treating those correlated points as independent inflates the effective sample size.
 
 Instead we compare on the independent unit (final-batch F1 per seed, 5 replicates) and report effect size and direction consistency:
 
-| Dataset       | Batch Design        | MLP mean F1   | DT mean F1    | MLP − DT | Consistency        |
-| ------------- | ------------------- | ------------- | ------------- | -------- | ------------------ |
-| Fashion-MNIST | Disjoint + refresh  | 0.369 ± 0.090 | 0.202 ± 0.027 | +0.167   | MLP wins 5/5 seeds |
-| Fashion-MNIST | Cumulative no-reuse | 0.458 ± 0.015 | 0.197 ± 0.006 | +0.261   | MLP wins 5/5 seeds |
-| MNIST Digits  | Table 10            | 0.652 ± 0.200 | 0.521 ± 0.180 | +0.131   | MLP wins 5/5 seeds |
+| Dataset       | Batch Design     | MLP mean F1   | DT mean F1    | MLP − DT | Consistency        |
+| ------------- | ---------------- | ------------- | ------------- | -------- | ------------------ |
+| Fashion-MNIST | Cumulative Set 2 | 0.874 ± 0.002 | 0.738 ± 0.005 | +0.136   | MLP wins 5/5 seeds |
+| MNIST Digits  | Cumulative Set 2 | 0.885 ± 0.004 | 0.723 ± 0.014 | +0.162   | MLP wins 5/5 seeds |
 
-MLP leads on every dataset and batch design, and the direction is consistent across all seeds. With only 5 independent replicates a formal paired test is underpowered (minimum attainable two-sided p ≈ 0.0625), so we rely on the large, consistent effect size rather than a significance claim.
+MLP leads on every dataset and batch design, and the direction is consistent across all seeds. We therefore rely on the large, consistent effect size rather than a formal hypothesis test.
 
 ### 3.5 Visualizations
 
@@ -470,7 +469,7 @@ A critical finding from branch v0.0.3.5: **batch composition strategy has a larg
 
 6. **DT-Strong (max_depth=300) partially closes the gap** — improving DT F1 from 0.73 to 0.80 on MNIST while maintaining fast training (~5s vs ~50s for MLP).
 
-7. **Original paper's choice of MLP is validated**: On the digit recognition task Learn++ was designed for, MLP significantly outperforms DT (p<0.0001), confirming Polikar et al.'s design decision.
+7. **Original paper's choice of MLP is validated**: On the digit recognition task Learn++ was designed for, MLP outperforms DT on every seed and batch, confirming Polikar et al.'s design decision.
 
 8. **Cumulative distribution (Set 2/Article Order) is optimal for all classifiers**
 
@@ -496,7 +495,7 @@ The weight distribution (40% quality, 30% cost, 30% efficiency/memory) reflects 
 
 ### On the Wilcoxon Signed-Rank Test (and why we do not pool it here)
 
-The Wilcoxon signed-rank test is a non-parametric paired test that does not assume a normal distribution of differences, but it does assume the paired observations are **independent**. Pooling our per-batch scores (5 seeds × 4 batches = 20 "pairs") breaks that assumption: the batches are cumulative (repeated measures on a growing ensemble), every seed reuses the same batch partition, and a single fixed test set is reused for every evaluation. We therefore compare on the independent unit (final-batch F1 per seed, 5 replicates) and report effect size and direction consistency instead of a pooled p-value. With only 5 independent replicates a formal paired test is also underpowered (minimum attainable two-sided p ≈ 0.0625).
+The Wilcoxon signed-rank test is a non-parametric paired test that does not assume a normal distribution of differences, but it does assume the paired observations are **independent**. Pooling our per-batch scores (5 seeds × 4 batches = 20 "pairs") breaks that assumption: the batches are cumulative (repeated measures on a growing ensemble), every seed reuses the same batch partition, and a single fixed test set is reused for every evaluation. We therefore compare on the independent unit (final-batch F1 per seed, 5 replicates) and report effect size and direction consistency instead of a pooled test.
 
 ### Reproducibility
 

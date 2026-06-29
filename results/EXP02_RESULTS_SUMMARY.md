@@ -34,7 +34,7 @@
 - **Classification Quality**: The MLP (the original paper's classifier) significantly outperforms both Decision Tree variants in accuracy and F1 score, demonstrating the effectiveness of the original design for digit recognition.
 - **Tree Depth Impact**: The "Stronger" Decision Tree (depth=300) closes a significant portion of the performance gap compared to the basic DT (depth=5), improving F1 from ~72.4% to ~79.6% with negligible increase in training time (~0.1s difference).
 - **The Quality-Cost Trade-Off**: While MLP delivers best classification performance, it is ~7-8× slower to train than DT variants. Consequently, under the balanced **CompositeScore** formula, the **DT Stronger** wins (0.8722 vs 0.6394 for MLP) by effectively balancing predictive performance and computational efficiency.
-- **On statistical testing**: We deliberately do **not** report a pooled Wilcoxon p-value over the $5\text{ seeds} \times 4\text{ batches} = 20$ scores, because that pooling violates the test's independence assumption (cumulative batches are repeated measures on a growing ensemble; all seeds reuse the same batch partition; a single fixed test set is reused). Instead we report the **effect size** (MLP leads by ~16 F1 points over DT and ~9 over DT-Strong) and **direction consistency** — MLP wins in **5/5** seeds and in every batch. With only 5 independent replicates a formal paired test is underpowered (min attainable two-sided $p \approx 0.0625$), so a significance claim is not warranted.
+- **On statistical testing**: We deliberately do **not** report a pooled Wilcoxon p-value over the $5\text{ seeds} \times 4\text{ batches} = 20$ scores, because that pooling violates the test's independence assumption (cumulative batches are repeated measures on a growing ensemble; all seeds reuse the same batch partition; a single fixed test set is reused). Instead we report the **effect size** (MLP leads by ~16 F1 points over DT and ~9 over DT-Strong) and **direction consistency** — MLP wins in **5/5** seeds and in every batch.
 
 ### Remaining work:
 
@@ -47,7 +47,7 @@
 - ✅ **Does MLP hold up as a superior learner for digit image data?** → Yes (F1 of ~89.0% vs ~80% for Stronger DT), and the advantage holds in every seed and every batch.
 - ✅ **Is DT a viable alternative?** → Yes, particularly if computational cost is prioritized, the DT Stronger variant provides highly competitive performance with much lower training overhead.
 - ✅ **Quality-cost trade-off?** → If computational efficiency is penalized in the metrics, the **DT Stronger** variant wins the CompositeScore by balancing accuracy and speed.
-- ✅ **Is the quality gap reliable?** → Yes by effect size and consistency (MLP wins 5/5 seeds, ~9–16 F1 points). We avoid a formal significance test because the nested/cumulative design and shared data partition violate its independence assumption.
+- ✅ **Is the quality gap reliable?** → Yes by effect size and consistency (MLP wins 5/5 seeds, ~9–16 F1 points). We avoid a formal hypothesis test because the nested/cumulative design and shared data partition violate its independence assumption.
 
 ---
 

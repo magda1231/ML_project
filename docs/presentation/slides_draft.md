@@ -133,7 +133,7 @@ D₃ (classes 7–9) → Train T₃=10 hypotheses → Ensemble: 30 models
 | Training time | ~17 min/seed | ~1.5 min/seed |
 | **MLP advantage** | **2.2×** quality | DT **9× faster** |
 
-**Wilcoxon signed-rank**: p = 0.0012 → MLP significantly better
+**Per-seed consistency**: MLP wins 5/5 seeds — large, consistent quality advantage
 
 *[Show: 3-panel comparison plot + confusion matrices]*
 
@@ -144,7 +144,7 @@ D₃ (classes 7–9) → Train T₃=10 hypotheses → Ensemble: 30 models
 > 3. [`01_learnpp_walkthrough.ipynb` L747–789 — confusion matrices → `exp01_confusion_matrices.png`](https://github.com/magda1231/ML_project/blob/a8a3625/notebooks/01_learnpp_walkthrough.ipynb#L747) — `01_learnpp_walkthrough.ipynb` · `a8a3625`
 > 4. [`EXP01_RESULTS_SUMMARY.md`](https://github.com/magda1231/ML_project/blob/a8a3625/results/EXP01_RESULTS_SUMMARY.md) — `results/EXP01_RESULTS_SUMMARY.md` · `a8a3625`
 
-> **Speaker notes**: MLP clearly dominates on quality — more than double the F1. DT is much faster but the accuracy is too low to be useful. Statistical test confirms this isn't random variation.
+> **Speaker notes**: MLP clearly dominates on quality — more than double the F1. DT is much faster but the accuracy is too low to be useful. The advantage is perfectly consistent — MLP wins on every seed and batch, not random variation.
 
 ---
 
@@ -157,7 +157,7 @@ D₃ (classes 7–9) → Train T₃=10 hypotheses → Ensemble: 30 models
 | Training time | ~95s/seed | ~30s/seed |
 | **MLP advantage** | **2.0×** quality | DT **3× faster** |
 
-**Wilcoxon signed-rank**: p = 0.0001 → MLP significantly better
+**Per-seed consistency**: MLP wins 5/5 seeds — large, consistent quality advantage
 
 Higher absolute scores than Fashion-MNIST → confirms MNIST digits are "easier"
 

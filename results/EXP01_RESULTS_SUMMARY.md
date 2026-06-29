@@ -73,11 +73,11 @@
 - **Classification Quality**: The MLP (the original paper's classifier) remains the superior model in terms of accuracy and F1 score, outperforming the basic Decision Tree by ~13.1 percentage points and the Stronger Decision Tree by ~4.7 percentage points.
 - **Tree Depth Impact**: Restricting tree depth to 5 (the recommended setting for medical/tabular data) is insufficient for image features even after PCA. However, increasing `max_depth` to 300 dramatically bridges the quality gap, improving the F1 score from ~74.2% to ~82.6%, while only increasing the training time slightly (from ~35s to ~55s).
 - **The Quality-Cost Trade-Off**: Although MLP delivers the best classification performance, it is computationally expensive (taking up to 11–17× longer to train than the decision trees). Consequently, under the balanced **CompositeScore** formula (which weights F1 at 40%, Balanced Accuracy at 15%, and penalizes training time, inference time, and memory footprint at 15% each), the **Decision Tree** wins (0.8563 vs 0.6308 for MLP).
-- **On statistical testing**: We deliberately do **not** report a pooled Wilcoxon p-value over the $5\text{ seeds} \times 4\text{ batches} = 20$ scores. That pooling violates the test's independence assumption (cumulative batches are repeated measures on a growing ensemble; all seeds reuse the same batch partition; a single fixed test set is reused), which inflates the effective sample size and yields an artificially tiny p-value. Instead we report the **effect size** (MLP leads by ~13 F1 points over DT and ~5 over DT-Strong) and **direction consistency** — MLP wins in **5/5** seeds and at every batch step. With only 5 independent replicates a formal paired test is underpowered (min attainable two-sided $p \approx 0.0625$), so a significance claim is not warranted.
+- **On statistical testing**: We deliberately do **not** report a pooled Wilcoxon p-value over the $5\text{ seeds} \times 4\text{ batches} = 20$ scores. That pooling violates the test's independence assumption (cumulative batches are repeated measures on a growing ensemble; all seeds reuse the same batch partition; a single fixed test set is reused). Instead we report the **effect size** (MLP leads by ~13 F1 points over DT and ~5 over DT-Strong) and **direction consistency** — MLP wins in **5/5** seeds and at every batch step.
 
 ### Quality Advantage: Effect Size & Consistency
 
-Comparison on the independent unit (final-batch F1 per seed, 5 replicates) rather than a pooled significance test (see note above on why pooling violates independence):
+Comparison on the independent unit (final-batch F1 per seed, 5 replicates) rather than a pooled hypothesis test (see note above on why pooling violates independence):
 
 - **MLP vs. DT (depth=5)**: MLP wins 5/5 seeds, ~+13 F1 points
 - **MLP vs. DT Stronger (depth=300)**: MLP wins 5/5 seeds, ~+5 F1 points
@@ -87,7 +87,7 @@ Comparison on the independent unit (final-batch F1 per seed, 5 replicates) rathe
 - ✅ **Does MLP hold up as a superior learner for image data?** → Yes, strongly (F1 of ~87.3% vs DT's ~74.2%), winning on every seed and batch.
 - ✅ **Is DT a viable alternative?** → Purely in terms of accuracy/F1 on image features, even a stronger DT lags behind MLP. However, for applications where resource constraints or deployment costs are critical, DT is extremely competitive.
 - ✅ **Quality-cost trade-off?** → If computation is penalized, the basic Decision Tree wins the CompositeScore (0.8563 vs MLP's 0.6308) due to being 12× faster to train.
-- ✅ **Is the quality gap reliable?** → Yes by effect size and consistency (MLP wins 5/5 seeds). We avoid a formal significance test because the nested/cumulative design and shared data partition violate its independence assumption.
+- ✅ **Is the quality gap reliable?** → Yes by effect size and consistency (MLP wins 5/5 seeds). We avoid a formal hypothesis test because the nested/cumulative design and shared data partition violate its independence assumption.
 
 ### Remaining work:
 

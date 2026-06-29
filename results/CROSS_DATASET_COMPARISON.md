@@ -64,7 +64,7 @@ We do **not** report a pooled Wilcoxon p-value here. The natural pooling ($5\tex
 | **MLP vs. DT (depth=5)**            | MLP wins 5/5 seeds | MLP wins 5/5 seeds | **MLP**          |
 | **MLP vs. DT Stronger (depth=300)** | MLP wins 5/5 seeds | MLP wins 5/5 seeds | **MLP**          |
 
-**Observation**: MLP's quality advantage is large and perfectly consistent — it wins on every seed and at every batch step on both datasets. With only 5 independent replicates per dataset a formal paired test is underpowered (min attainable two-sided $p \approx 0.0625$), so we rely on effect size and consistency rather than a significance claim.
+**Observation**: MLP's quality advantage is large and perfectly consistent — it wins on every seed and at every batch step on both datasets. We therefore rely on effect size and consistency rather than a formal hypothesis test.
 
 ---
 
@@ -91,7 +91,7 @@ Under the CompositeScore cost-penalization formula, the winner flips:
 
 | Scenario                                         | Recommendation              | Rationale                                                                                                       |
 | ------------------------------------------------ | --------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| **Maximal accuracy/quality is paramount**        | **MLP**                     | Always delivers the highest F1 (~87–89%) with full statistical significance.                                    |
+| **Maximal accuracy/quality is paramount**        | **MLP**                     | Always delivers the highest F1 (~87–89%), winning on every seed and batch.                                    |
 | **Extremely tight compute budget**               | **DT (depth=5)**            | Trains in under 1.0–35s (up to 12× faster) with decent quality.                                                 |
 | **Low-compute visual tasks (Digit Recognition)** | **DT Stronger (depth=300)** | Trains in 1.2s, reaches ~80% F1, and wins the balanced CompositeScore.                                          |
 | **Large-scale, complex visual tasks**            | **MLP or DT Stronger**      | MLP is optimal for top performance; DT Stronger is optimal if MLP's training time (10 min+) is too restrictive. |
