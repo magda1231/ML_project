@@ -340,14 +340,14 @@ Both classifiers produce identical ensemble growth (40 hypotheses total: $T_k = 
 
 | Dataset       | Batch | MLP Time (s) | DT Time (s) | DT Stronger Time (s) | DT Speedup (vs MLP) | DT-Str Speedup (vs MLP) |
 | ------------- | ----- | ------------ | ----------- | -------------------- | ------------------- | ----------------------- |
-| Fashion-MNIST | D1    | ~180         | ~15         | ~20                  | 12×                 | 9×                      |
-| Fashion-MNIST | D2    | ~120         | ~10         | ~15                  | 12×                 | 8×                      |
-| Fashion-MNIST | D3    | ~100         | ~10         | ~15                  | 10×                 | 6.7×                    |
-| Fashion-MNIST | D4    | ~90          | ~9          | ~14                  | 10×                 | 6.4×                    |
-| MNIST Digits  | S1    | 1.6          | 0.1         | 0.1                  | 16×                 | 16×                     |
-| MNIST Digits  | S2    | 2.7          | 0.3         | 0.3                  | 9×                  | 9×                      |
-| MNIST Digits  | S3    | 2.4          | 0.3         | 0.4                  | 8×                  | 6×                      |
-| MNIST Digits  | S4    | 2.2          | 0.3         | 0.4                  | 7.3×                | 5.5×                    |
+| Fashion-MNIST | S1    | 50.8         | 3.1         | 3.6                  | 16.4×               | 14.1×                   |
+| Fashion-MNIST | S2    | 110.0        | 7.8         | 13.4                 | 14.1×               | 8.2×                    |
+| Fashion-MNIST | S3    | 111.3        | 10.8        | 19.0                 | 10.3×               | 5.9×                    |
+| Fashion-MNIST | S4    | 122.2        | 13.7        | 19.5                 | 8.9×                | 6.3×                    |
+| MNIST Digits  | S1    | 15.3         | 2.1         | 3.0                  | 7.3×                | 5.1×                    |
+| MNIST Digits  | S2    | 53.6         | 8.8         | 15.8                 | 6.1×                | 3.4×                    |
+| MNIST Digits  | S3    | 70.4         | 14.8        | 23.3                 | 4.8×                | 3.0×                    |
+| MNIST Digits  | S4    | 70.3         | 18.9        | 22.4                 | 3.7×                | 3.1×                    |
 
 MLP's training cost scales with data complexity (more iterations needed on harder data).
 
